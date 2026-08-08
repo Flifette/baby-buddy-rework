@@ -8,4 +8,5 @@ export const colors = {
   height: "#6366F1",
   note: "#84CC16",
   pumping: "#E879A8",
+  milkWaste: "#94A3B8",
 };

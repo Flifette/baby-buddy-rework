@@ -29,6 +29,15 @@ export const Icons = {
       <path d="M9 16h6" opacity="0.4" />
     </svg>
   ),
+  BottleOff: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2h4v3h-4z" />
+      <path d="M8 5h8l1 4H7l1-4z" />
+      <rect x="7" y="9" width="10" height="13" rx="2" />
+      <path d="M4 4l16 16" strokeWidth="2.4" />
+      <path d="M20 4 4 20" strokeWidth="2.4" />
+    </svg>
+  ),
   BabyCrawl: () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="17" cy="6" r="3" />
@@ -53,6 +62,12 @@ export const Icons = {
   Activity: () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  ),
+  Eye: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   ),
   Calendar: () => (

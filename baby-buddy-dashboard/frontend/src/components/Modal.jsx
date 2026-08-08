@@ -127,9 +127,17 @@ export function FormSelect({ options, ...props }) {
   );
 }
 
-export function FormButton({ children, color, ...props }) {
+export function FormButton({ children, color, type = "submit", onPointerDown, ...props }) {
+  const prepareSubmit = (event) => {
+    if (type === "submit" && document.activeElement instanceof HTMLElement && document.activeElement !== event.currentTarget) {
+      document.activeElement.blur();
+    }
+    onPointerDown?.(event);
+  };
   return (
     <button
+      type={type}
+      onPointerDown={prepareSubmit}
       {...props}
       style={{
         width: "100%",
@@ -141,6 +149,7 @@ export function FormButton({ children, color, ...props }) {
         fontSize: 14,
         fontWeight: 700,
         cursor: "pointer",
+        touchAction: "manipulation",
         fontFamily: "inherit",
         transition: "opacity 0.2s",
         ...props.style,

@@ -1,6 +1,9 @@
 import os
 import json
+import asyncio
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response, HTTPException
@@ -36,6 +39,8 @@ if not BABY_BUDDY_URL:
         UNIT_SYSTEM = opts.get("unit_system", UNIT_SYSTEM)
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
+MILK_WASTE_FILE = Path(os.environ.get("MILK_WASTE_FILE", "/data/milk-waste.json"))
+milk_waste_lock = asyncio.Lock()
 
 # --- App lifecycle ---
 
@@ -62,6 +67,95 @@ app = FastAPI(lifespan=lifespan)
 
 
 # --- API routes ---
+
+
+def read_milk_waste_entries() -> list[dict]:
+    if not MILK_WASTE_FILE.exists():
+        return []
+    try:
+        data = json.loads(MILK_WASTE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(500, "Unable to read milk waste data") from exc
+    if not isinstance(data, list):
+        raise HTTPException(500, "Invalid milk waste data")
+    return data
+
+
+def write_milk_waste_entries(entries: list[dict]) -> None:
+    try:
+        MILK_WASTE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = MILK_WASTE_FILE.with_suffix(".tmp")
+        temp_path.write_text(
+            json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temp_path.replace(MILK_WASTE_FILE)
+    except OSError as exc:
+        raise HTTPException(500, "Unable to save milk waste data") from exc
+
+
+def validate_milk_waste(payload: dict, existing_id: str | None = None) -> dict:
+    try:
+        child = int(payload.get("child"))
+        amount = float(payload.get("amount"))
+        time = str(payload.get("time", "")).strip()
+        datetime.fromisoformat(time.replace("Z", "+00:00"))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(422, "Invalid milk waste occurrence") from exc
+    if child <= 0 or amount <= 0 or amount > 5000:
+        raise HTTPException(422, "Invalid milk waste occurrence")
+    return {
+        "id": existing_id or str(uuid.uuid4()),
+        "child": child,
+        "amount": round(amount, 1),
+        "time": time,
+        "note": str(payload.get("note", "")).strip()[:500],
+    }
+
+
+@app.get("/api/milk-waste")
+async def get_milk_waste(child: int | None = None, start_min: str | None = None, start_max: str | None = None):
+    entries = read_milk_waste_entries()
+    if child is not None:
+        entries = [entry for entry in entries if entry.get("child") == child]
+    if start_min:
+        entries = [entry for entry in entries if str(entry.get("time", "")) >= start_min]
+    if start_max:
+        entries = [entry for entry in entries if str(entry.get("time", "")) <= start_max]
+    return sorted(entries, key=lambda entry: entry.get("time", ""), reverse=True)
+
+
+@app.post("/api/milk-waste", status_code=201)
+async def create_milk_waste(request: Request):
+    entry = validate_milk_waste(await request.json())
+    async with milk_waste_lock:
+        entries = read_milk_waste_entries()
+        entries.append(entry)
+        write_milk_waste_entries(entries)
+    return entry
+
+
+@app.patch("/api/milk-waste/{entry_id}")
+async def update_milk_waste(entry_id: str, request: Request):
+    async with milk_waste_lock:
+        entries = read_milk_waste_entries()
+        index = next((i for i, entry in enumerate(entries) if entry.get("id") == entry_id), None)
+        if index is None:
+            raise HTTPException(404, "Milk waste occurrence not found")
+        entries[index] = validate_milk_waste(await request.json(), entry_id)
+        write_milk_waste_entries(entries)
+        return entries[index]
+
+
+@app.delete("/api/milk-waste/{entry_id}", status_code=204)
+async def delete_milk_waste(entry_id: str):
+    async with milk_waste_lock:
+        entries = read_milk_waste_entries()
+        filtered = [entry for entry in entries if entry.get("id") != entry_id]
+        if len(filtered) == len(entries):
+            raise HTTPException(404, "Milk waste occurrence not found")
+        write_milk_waste_entries(filtered)
+    return Response(status_code=204)
 
 
 @app.get("/api/config")
