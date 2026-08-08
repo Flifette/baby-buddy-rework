@@ -38,14 +38,14 @@ case "tummy": return <Icons.BabyCrawl />;
       sleep: "Sommeil",
       tummy: "Temps sur le ventre",
     };
-    return `${titles[type] || "Activities"} - ${day}`;
+    return `${titles[type] || "Activités"} - ${day}`;
   };
 
   const renderContent = () => {
     if (!data || data.length === 0) {
       return (
         <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 40 }}>
-          No {type} activities for this day
+          Aucune activité enregistrée pour cette journée
         </div>
       );
     }

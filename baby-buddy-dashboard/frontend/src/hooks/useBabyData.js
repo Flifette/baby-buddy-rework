@@ -41,6 +41,7 @@ export function useBabyData(period = "week") {
   const [monthlyFeedings, setMonthlyFeedings] = useState([]);
   const [monthlySleep, setMonthlySleep] = useState([]);
   const [pumping, setPumping] = useState([]);
+  const [milkWaste, setMilkWaste] = useState([]);
   const [notes, setNotes] = useState([]);
   const [timers, setTimers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +50,10 @@ export function useBabyData(period = "week") {
   const [unitSystem, setUnitSystem] = useState("metric");
   const intervalRef = useRef(null);
   const childIdRef = useRef(null);
+  const requestIdRef = useRef(0);
 
   const fetchData = useCallback(async (childId) => {
+    const requestId = ++requestIdRef.current;
     try {
       const now = new Date();
 
@@ -88,9 +91,8 @@ export function useBabyData(period = "week") {
         heightRes,
         timersRes,
         notesRes,
-        monthlyFeedingsRes,
-        monthlySleepRes,
         pumpingRes,
+        milkWasteRes,
       ] = await Promise.all([
         api.getFeedings({ child: c, start_min: periodMin, start_max: periodDays === 1 ? todayMax : undefined, limit: 5000, ordering: "-start" }),
         api.getFeedings({ child: c, start_min: weekMin, limit: 200, ordering: "-start" }),
@@ -104,10 +106,11 @@ export function useBabyData(period = "week") {
         api.getHeight({ child: c, limit: 20, ordering: "-date" }),
         api.getTimers(),
         api.getNotes({ child: c, start_min: periodMin, limit: 5000, ordering: "-time" }),
-        api.getFeedings({ child: c, start_min: periodMin, limit: 5000, ordering: "-start" }),
-        api.getSleep({ child: c, start_min: periodMin, limit: 5000, ordering: "-start" }),
         api.getPumping({ child: c, start_min: periodMin, limit: 5000, ordering: "-start" }),
+        api.getMilkWaste({ child: c, start_min: periodMin, start_max: periodDays === 1 ? todayMax : undefined }),
       ]);
+
+      if (requestId !== requestIdRef.current) return;
 
       setFeedings(resultList(feedingsRes));
       setWeeklyFeedings(resultList(weeklyFeedingsRes));
@@ -121,15 +124,18 @@ export function useBabyData(period = "week") {
       setHeights(resultList(heightRes));
       setTimers(resultList(timersRes));
       setNotes(resultList(notesRes));
-      setMonthlyFeedings(resultList(monthlyFeedingsRes));
-      setMonthlySleep(resultList(monthlySleepRes));
+      // Growth uses the same period-filtered data. Reusing these responses avoids
+      // downloading the complete feeding and sleep history twice for "Total".
+      setMonthlyFeedings(resultList(feedingsRes));
+      setMonthlySleep(resultList(sleepRes));
       setPumping(resultList(pumpingRes));
+      setMilkWaste(resultList(milkWasteRes));
       setLastSync(new Date());
       setError(null);
     } catch (err) {
-      setError(err.message);
+      if (requestId === requestIdRef.current) setError(err.message);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [period]);
 
@@ -184,6 +190,7 @@ export function useBabyData(period = "week") {
     setMonthlyFeedings(mock.monthlyFeedings);
     setMonthlySleep(mock.monthlySleep);
     setPumping([]);
+    setMilkWaste([]);
     setLastSync(new Date());
     setLoading(false);
   }, []);
@@ -210,6 +217,7 @@ export function useBabyData(period = "week") {
       setMonthlyFeedings(mock.monthlyFeedings);
       setMonthlySleep(mock.monthlySleep);
       setPumping([]);
+      setMilkWaste([]);
     },
     [children, child]
   );
@@ -255,6 +263,7 @@ export function useBabyData(period = "week") {
     monthlyFeedings,
     monthlySleep,
     pumping,
+    milkWaste,
     notes,
     timers,
     loading,

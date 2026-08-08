@@ -20,7 +20,7 @@ export default function ChartDetailBar({ label, value, unit, color, onViewEntrie
         {value} {unit}
       </span>
       <div style={{ display: "flex", gap: 6 }}>
-        <button
+        {onViewEntries && <button
           onClick={onViewEntries}
           style={{
             padding: "3px 10px",
@@ -35,7 +35,7 @@ export default function ChartDetailBar({ label, value, unit, color, onViewEntrie
           }}
         >
           {actionLabel}
-        </button>
+        </button>}
         <button
           onClick={onDismiss}
           style={{

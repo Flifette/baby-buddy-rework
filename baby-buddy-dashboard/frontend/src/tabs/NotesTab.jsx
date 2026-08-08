@@ -42,7 +42,7 @@ export default function NotesTab({ notes, onEditEntry }) {
           </div>
         ) : (
           <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 40 }}>
-            No notes yet — tap + to add one
+            Aucune note pour le moment — touchez + pour en ajouter une
           </div>
         )}
       </SectionCard>

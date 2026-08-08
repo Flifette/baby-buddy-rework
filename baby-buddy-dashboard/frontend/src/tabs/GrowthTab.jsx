@@ -18,27 +18,43 @@ import DayActivitiesModal from "../components/DayActivitiesModal";
 import { Icons } from "../components/Icons";
 import { colors } from "../utils/colors";
 import { useUnits } from "../utils/units";
-import { toGrowthSeries, formatGrowthTick, dailyFeedingTotals, dailySleepTotals, getEntriesForDate } from "../utils/formatters";
+import { toGrowthSeries, formatGrowthTick, dailyFeedingTotals, dailySleepTotals, dailyTummyTotals, getEntriesForDate, parseDuration } from "../utils/formatters";
 
-export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySleep, pumping = [], period = "week", childId, onEditEntry, visibleTiles = {} }) {
+const hourLabel = (value) => new Date(value).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySleep, tummyTimes = [], pumping = [], feedings = [], milkWaste = [], period = "week", onEditEntry, onEditMilkWaste, visibleTiles = {} }) {
   const units = useUnits();
   const [dayModal, setDayModal] = useState(null);
   const [selectedBar, setSelectedBar] = useState(null);
   const periodDays = { day: 1, week: 7, month: 30, halfyear: 183, year: 365 }[period];
-  const cutoff = periodDays ? Date.now() - (periodDays - 1) * 86400000 : 0;
+  const cutoffDate = new Date();
+  cutoffDate.setHours(0, 0, 0, 0);
+  if (periodDays) cutoffDate.setDate(cutoffDate.getDate() - (periodDays - 1));
+  const cutoff = periodDays ? cutoffDate.getTime() : 0;
   const inPeriod = (entry, key) => !cutoff || !entry?.[key] || new Date(entry[key]).getTime() >= cutoff;
   const periodWeights = (weights || []).filter((e) => inPeriod(e, "date"));
   const periodHeights = (heights || []).filter((e) => inPeriod(e, "date"));
   const periodFeedings = (monthlyFeedings || []).filter((e) => inPeriod(e, "start"));
   const periodSleep = (monthlySleep || []).filter((e) => inPeriod(e, "start"));
+  const periodTummy = (tummyTimes || []).filter((e) => inPeriod(e, "start"));
   const weightSeries = toGrowthSeries(periodWeights, "weight");
   const heightSeries = toGrowthSeries(periodHeights, "height");
-  const chartDays = periodDays || 3650;
-  const feedingSeries = dailyFeedingTotals(periodFeedings, chartDays);
-  const sleepSeries = dailySleepTotals(periodSleep, chartDays);
+  // "Total" renders only dates that actually contain data instead of 3,650
+  // empty daily points, which keeps Recharts responsive on long histories.
+  const chartDays = periodDays || null;
+  const feedingSeries = period === "day"
+    ? periodFeedings.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: hourLabel(entry.start), timestamp: new Date(entry.start).getTime(), amount: Number(entry.amount || 0), entry }))
+    : dailyFeedingTotals(periodFeedings, chartDays);
+  const sleepSeries = period === "day"
+    ? periodSleep.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: hourLabel(entry.start), timestamp: new Date(entry.start).getTime(), hours: parseDuration(entry.duration), entry }))
+    : dailySleepTotals(periodSleep, chartDays);
+  const tummySeries = period === "day"
+    ? periodTummy.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: hourLabel(entry.start), timestamp: new Date(entry.start).getTime(), minutes: Math.round(parseDuration(entry.duration) * 60), entry }))
+    : dailyTummyTotals(periodTummy, chartDays);
+  const dayDomain = [cutoffDate.getTime(), cutoffDate.getTime() + 24 * 60 * 60 * 1000];
 
-  const latestWeight = periodWeights[0];
-  const latestHeight = periodHeights[0];
+  const latestWeight = (weights || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+  const latestHeight = (heights || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 
   // Compute averages for stat cards
   const feedingDays = feedingSeries.filter((d) => d.amount > 0);
@@ -49,11 +65,17 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
   const avgSleep = sleepDays.length
     ? (sleepDays.reduce((s, d) => s + d.hours, 0) / sleepDays.length).toFixed(1)
     : 0;
+  const totalFeeding = feedingSeries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalSleep = sleepSeries.reduce((sum, item) => sum + Number(item.hours || 0), 0).toFixed(1);
+  const tummyDays = tummySeries.filter((item) => item.minutes > 0);
+  const avgTummy = tummyDays.length ? Math.round(tummyDays.reduce((sum, item) => sum + item.minutes, 0) / tummyDays.length) : 0;
+  const totalTummy = tummySeries.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
 
   const handleChartClick = (data, type) => {
     if (!data || !data.activePayload?.[0]) return;
     const payload = data.activePayload[0];
-    const label = data.activeLabel;
+    const rawLabel = data.activeLabel;
+    const label = period === "day" && (type === "feeding" || type === "sleep" || type === "tummy") ? hourLabel(rawLabel) : rawLabel;
     const value = payload.value;
     const entry = payload.payload?.entry;
     setSelectedBar({ type, label, value, entry });
@@ -67,6 +89,8 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
       dayData = getEntriesForDate(periodSleep, dateLabel, "start");
     } else if (type === "pumping") {
       dayData = getEntriesForDate(pumping, dateLabel, "start");
+    } else if (type === "tummy") {
+      dayData = getEntriesForDate(periodTummy, dateLabel, "start");
     }
     setSelectedBar(null);
     setDayModal({ day: dateLabel, type, data: dayData });
@@ -75,7 +99,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
   return (
     <>
       {/* Latest Measurements */}
-      {visibleTiles.measurements !== false ? (<div
+      <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
@@ -83,7 +107,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
           marginBottom: 20,
         }}
       >
-        <div className="fade-in fade-in-1">
+        {visibleTiles.measurements !== false ? (<><div className="fade-in fade-in-1">
           <div
             style={{
               background: "var(--card-bg)",
@@ -159,9 +183,9 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
               </div>
             )}
           </div>
-        </div>
+        </div></>) : null}
 
-        <div className="fade-in fade-in-3">
+        <>{visibleTiles.feedingSummary !== false ? (<div className="fade-in fade-in-3">
           <div
             style={{
               background: "var(--card-bg)",
@@ -186,19 +210,19 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                 <Icons.Bottle />
               </div>
               <span style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                Moyenne des repas
+                {period === "day" ? "Repas" : "Moyenne des repas"}
               </span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              {avgFeeding ? `${avgFeeding} ${units.volume}` : "—"}
+              {(period === "day" ? totalFeeding : avgFeeding) ? `${period === "day" ? totalFeeding : avgFeeding} ${units.volume}` : "—"}
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-              par jour sur la période
+              {period === "day" ? "sur la journée" : "par jour sur la période"}
             </div>
           </div>
-        </div>
+        </div>) : null}
 
-        <div className="fade-in fade-in-4">
+        {visibleTiles.sleepSummary !== false ? (<div className="fade-in fade-in-4">
           <div
             style={{
               background: "var(--card-bg)",
@@ -223,18 +247,35 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                 <Icons.Moon />
               </div>
               <span style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                Sommeil moyen
+                {period === "day" ? "Sommeil" : "Sommeil moyen"}
               </span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              {avgSleep ? `${avgSleep} H` : "—"}
+              {(period === "day" ? Number(totalSleep) : avgSleep) ? `${period === "day" ? totalSleep : avgSleep} H` : "—"}
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-              par jour sur la période
+              {period === "day" ? "sur la journée" : "par jour sur la période"}
             </div>
           </div>
-        </div>
-      </div>) : null}
+        </div>) : null}
+
+        {visibleTiles.tummySummary !== false ? (<div className="fade-in fade-in-4">
+          <div style={{ background: "var(--card-bg)", borderRadius: 16, padding: "20px 22px", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `${colors.tummy}18`, color: colors.tummy, display: "flex", alignItems: "center", justifyContent: "center" }}><Icons.BabyCrawl /></div>
+              <span style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                {period === "day" ? "Temps sur le ventre" : "Temps sur le ventre moyen"}
+              </span>
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
+              {(period === "day" ? totalTummy : avgTummy) ? `${period === "day" ? totalTummy : avgTummy} min` : "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              {period === "day" ? "sur la journée" : "par jour sur la période"}
+            </div>
+          </div>
+        </div>) : null}</>
+      </div>
 
       {/* Charts */}
       <div
@@ -253,16 +294,16 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={feedingSeries} onClick={(data) => handleChartClick(data, "feeding")}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#252836" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <XAxis dataKey={period === "day" ? "timestamp" : "date"} type={period === "day" ? "number" : "category"} scale={period === "day" ? "time" : "auto"} domain={period === "day" ? dayDomain : undefined} tickFormatter={period === "day" ? hourLabel : undefined} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                       <YAxis tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={<CustomTooltip labelFormatter={period === "day" ? hourLabel : undefined} />} />
                       <Area
                         type="monotone"
                         dataKey="amount"
                         stroke={colors.feeding}
                         strokeWidth={2}
                         fill={`${colors.feeding}30`}
-                        dot={false}
+                        dot={period === "day" ? { r: 4, fill: colors.feeding } : false}
                         activeDot={{ r: 4, fill: colors.feeding, cursor: "pointer" }}
                         cursor="pointer"
                       />
@@ -275,7 +316,10 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     value={selectedBar.value}
                     unit={units.volume}
                     color={colors.feeding}
-                    onViewEntries={() => openDayModal(selectedBar.label, "feeding")}
+                    onViewEntries={() => {
+                      if (period === "day" && selectedBar.entry) onEditEntry?.("feeding", selectedBar.entry);
+                      else openDayModal(selectedBar.label, "feeding");
+                    }}
                     onDismiss={() => setSelectedBar(null)}
                   />
                 )}
@@ -297,16 +341,16 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={sleepSeries} onClick={(data) => handleChartClick(data, "sleep")}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#252836" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <XAxis dataKey={period === "day" ? "timestamp" : "date"} type={period === "day" ? "number" : "category"} scale={period === "day" ? "time" : "auto"} domain={period === "day" ? dayDomain : undefined} tickFormatter={period === "day" ? hourLabel : undefined} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                       <YAxis tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={<CustomTooltip labelFormatter={period === "day" ? hourLabel : undefined} />} />
                       <Area
                         type="monotone"
                         dataKey="hours"
                         stroke={colors.sleep}
                         strokeWidth={2}
                         fill={`${colors.sleep}30`}
-                        dot={false}
+                        dot={period === "day" ? { r: 4, fill: colors.sleep } : false}
                         activeDot={{ r: 4, fill: colors.sleep, cursor: "pointer" }}
                         cursor="pointer"
                       />
@@ -319,7 +363,10 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     value={selectedBar.value}
                     unit="H"
                     color={colors.sleep}
-                    onViewEntries={() => openDayModal(selectedBar.label, "sleep")}
+                    onViewEntries={() => {
+                      if (period === "day" && selectedBar.entry) onEditEntry?.("sleep", selectedBar.entry);
+                      else openDayModal(selectedBar.label, "sleep");
+                    }}
                     onDismiss={() => setSelectedBar(null)}
                   />
                 )}
@@ -332,8 +379,44 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
           </SectionCard>
         </div>) : null}
 
+        {/* Daily Tummy Time Totals */}
+        {visibleTiles.tummyChart !== false ? (<div className="fade-in fade-in-6">
+          <SectionCard title="Temps sur le ventre quotidien" icon={<Icons.BabyCrawl />} color={colors.tummy}>
+            {tummySeries.some((item) => item.minutes > 0) ? (
+              <>
+                <div style={{ height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={tummySeries} onClick={(data) => handleChartClick(data, "tummy")}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#252836" vertical={false} />
+                      <XAxis dataKey={period === "day" ? "timestamp" : "date"} type={period === "day" ? "number" : "category"} scale={period === "day" ? "time" : "auto"} domain={period === "day" ? dayDomain : undefined} tickFormatter={period === "day" ? hourLabel : undefined} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<CustomTooltip labelFormatter={period === "day" ? hourLabel : undefined} />} />
+                      <Area type="monotone" dataKey="minutes" stroke={colors.tummy} strokeWidth={2} fill={`${colors.tummy}30`} dot={period === "day" ? { r: 4, fill: colors.tummy } : false} activeDot={{ r: 4, fill: colors.tummy, cursor: "pointer" }} cursor="pointer" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {selectedBar?.type === "tummy" && (
+                  <ChartDetailBar
+                    label={selectedBar.label}
+                    value={selectedBar.value}
+                    unit="min"
+                    color={colors.tummy}
+                    onViewEntries={() => {
+                      if (period === "day" && selectedBar.entry) onEditEntry?.("tummy", selectedBar.entry);
+                      else openDayModal(selectedBar.label, "tummy");
+                    }}
+                    onDismiss={() => setSelectedBar(null)}
+                  />
+                )}
+              </>
+            ) : (
+              <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 40 }}>Aucune donnée de temps sur le ventre sur cette période</div>
+            )}
+          </SectionCard>
+        </div>) : null}
+
         {/* Weight Chart */}
-        {visibleTiles.weightChart !== false ? (<div className="fade-in fade-in-7">
+        {period !== "day" && visibleTiles.weightChart !== false ? (<div className="fade-in fade-in-7">
           <SectionCard title="Évolution du poids" icon={<Icons.Weight />} color={colors.growth}>
             {weightSeries.length >= 2 ? (
               <>
@@ -361,7 +444,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     value={selectedBar.value}
                     unit={units.weight}
                     color={colors.growth}
-                    actionLabel="Edit"
+                    actionLabel="Modifier"
                     onViewEntries={() => {
                       if (selectedBar.entry) onEditEntry?.("weight", selectedBar.entry);
                       setSelectedBar(null);
@@ -379,7 +462,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
         </div>) : null}
 
         {/* Height Chart */}
-        {visibleTiles.heightChart !== false ? (<div className="fade-in fade-in-8">
+        {period !== "day" && visibleTiles.heightChart !== false ? (<div className="fade-in fade-in-8">
           <SectionCard title="Évolution de la taille" icon={<Icons.Ruler />} color={colors.height}>
             {heightSeries.length >= 2 ? (
               <>
@@ -407,7 +490,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     value={selectedBar.value}
                     unit={units.length}
                     color={colors.height}
-                    actionLabel="Edit"
+                    actionLabel="Modifier"
                     onViewEntries={() => {
                       if (selectedBar.entry) onEditEntry?.("height", selectedBar.entry);
                       setSelectedBar(null);
@@ -426,7 +509,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
       </div>
 
       {visibleTiles.milkStock !== false ? (<div style={{ marginTop: 16 }}>
-      <MilkStock childId={childId} onViewEntries={(label) => openDayModal(label, "pumping")} />
+      <MilkStock pumping={pumping} feedings={feedings} milkWaste={milkWaste} onEditWaste={onEditMilkWaste} />
       </div>) : null}
 
       {dayModal && (

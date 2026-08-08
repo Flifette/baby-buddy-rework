@@ -58,9 +58,24 @@ export function formatDuration(durationStr) {
 }
 
 export function toFeedingTimeline(feedings, volumeUnit = "mL") {
+  const methodLabels = {
+    bottle: "Biberon",
+    "left breast": "Sein gauche",
+    "right breast": "Sein droit",
+    "both breasts": "Deux seins",
+    "parent fed": "Donné par un parent",
+    "self fed": "Autonome",
+  };
+  const typeLabels = {
+    "breast milk": "Lait maternel",
+    "fortified breast milk": "Lait maternel enrichi",
+    formula: "Lait infantile",
+    "solid food": "Aliments solides",
+  };
+
   return feedings.map((f) => ({
     time: formatTime(f.end || f.start),
-    label: `${f.amount ? (typeof volumeUnit === "function" ? volumeUnit(f.amount) : f.amount + " " + volumeUnit) : ""} ${({ bottle: "Biberon", "left breast": "Sein gauche", "right breast": "Sein droit", "both breasts": "Deux seins" }[f.method] || ({ "breast milk": "Lait maternel", "fortified breast milk": "Lait maternel enrichi", formula: "Lait infantile" }[f.type] || f.method || f.type || ""))}`.trim() || "Repas",
+    label: `${f.amount ? (typeof volumeUnit === "function" ? volumeUnit(f.amount) : f.amount + " " + volumeUnit) : ""} ${methodLabels[f.method] || typeLabels[f.type] || f.method || f.type || ""}`.trim() || "Repas",
     detail: timeAgo(f.end || f.start),
     amount: f.amount || 0,
     type: f.type,
@@ -202,6 +217,19 @@ function getLastNDays(n) {
 }
 
 export function dailyFeedingTotals(entries, numDays = 30) {
+  if (numDays == null) {
+    const sums = new Map();
+    entries.forEach((entry) => {
+      const key = entryDateStr(entry.start || entry.time || entry.date);
+      sums.set(key, (sums.get(key) || 0) + parseFloat(entry.amount || 0));
+    });
+    return [...sums.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, amount]) => ({
+        date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        amount: Math.round(amount),
+      }));
+  }
   const days = getLastNDays(numDays);
   const sums = {};
   days.forEach((d) => (sums[d.dateStr] = 0));
@@ -238,6 +266,19 @@ export function getEntriesForDate(entries, dateLabel, dateKey = "start") {
 }
 
 export function dailySleepTotals(entries, numDays = 30) {
+  if (numDays == null) {
+    const sums = new Map();
+    entries.forEach((entry) => {
+      const key = entryDateStr(entry.start);
+      sums.set(key, (sums.get(key) || 0) + parseDuration(entry.duration));
+    });
+    return [...sums.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, hours]) => ({
+        date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        hours: Math.round(hours * 10) / 10,
+      }));
+  }
   const days = getLastNDays(numDays);
   const sums = {};
   days.forEach((d) => (sums[d.dateStr] = 0));
@@ -247,5 +288,31 @@ export function dailySleepTotals(entries, numDays = 30) {
   });
   const result = days.map((d) => ({ date: d.label, hours: Math.round(sums[d.dateStr] * 10) / 10 }));
   const firstNonZero = result.findIndex((d) => d.hours > 0);
+  return firstNonZero > 0 ? result.slice(firstNonZero) : result;
+}
+
+export function dailyTummyTotals(entries, numDays = 30) {
+  if (numDays == null) {
+    const sums = new Map();
+    entries.forEach((entry) => {
+      const key = entryDateStr(entry.start);
+      sums.set(key, (sums.get(key) || 0) + parseDuration(entry.duration) * 60);
+    });
+    return [...sums.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, minutes]) => ({
+        date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        minutes: Math.round(minutes),
+      }));
+  }
+  const days = getLastNDays(numDays);
+  const sums = {};
+  days.forEach((day) => (sums[day.dateStr] = 0));
+  entries.forEach((entry) => {
+    const key = entryDateStr(entry.start);
+    if (key in sums) sums[key] += parseDuration(entry.duration) * 60;
+  });
+  const result = days.map((day) => ({ date: day.label, minutes: Math.round(sums[day.dateStr]) }));
+  const firstNonZero = result.findIndex((day) => day.minutes > 0);
   return firstNonZero > 0 ? result.slice(firstNonZero) : result;
 }

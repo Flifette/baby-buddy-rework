@@ -21,7 +21,10 @@ services:
       - DEMO_MODE=${DEMO_MODE:-false}
     ports:
       - "8099:8099"
+    volumes:
+      - dashboard_data:/data
     restart: unless-stopped
 
 volumes:
   babybuddy_data:
+  dashboard_data:
