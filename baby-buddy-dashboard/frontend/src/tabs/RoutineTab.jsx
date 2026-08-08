@@ -8,6 +8,7 @@ const FILTERS = [
   ["pumping", "Tirage", colors.pumping],
   ["diaper", "Changes", colors.diaper],
   ["sleep", "Sommeil", colors.sleep],
+  ["tummy", "Temps sur le ventre", colors.tummy],
 ];
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -24,7 +25,7 @@ const entryEnd = (entry, start) => {
   return duration > 0 ? new Date(start.getTime() + duration) : start;
 };
 
-export default function RoutineTab({ feedings = [], pumping = [], changes = [], sleepEntries = [], period = "week" }) {
+export default function RoutineTab({ feedings = [], pumping = [], changes = [], sleepEntries = [], tummyTimes = [], period = "week" }) {
   const [filters, setFilters] = useState([]);
   const toggleFilter = (id) => {
     setFilters((current) => {
@@ -36,7 +37,8 @@ export default function RoutineTab({ feedings = [], pumping = [], changes = [], 
     ...pumping.map((entry) => ({ ...entry, routineType: "pumping", at: entry.start })),
     ...changes.map((entry) => ({ ...entry, routineType: "diaper", at: entry.time })),
     ...sleepEntries.map((entry) => ({ ...entry, routineType: "sleep", at: entry.start })),
-  ].filter((entry) => entry.at && (!filters.length || filters.includes(entry.routineType))), [feedings, pumping, changes, sleepEntries, filters]);
+    ...tummyTimes.map((entry) => ({ ...entry, routineType: "tummy", at: entry.start })),
+  ].filter((entry) => entry.at && (!filters.length || filters.includes(entry.routineType))), [feedings, pumping, changes, sleepEntries, tummyTimes, filters]);
 
   const days = useMemo(() => {
     const keys = [...new Set(entries.flatMap((entry) => { const start = new Date(entry.at); const end = entryEnd(entry, start); return [dateKey(start), dateKey(end)]; }))].sort();
@@ -50,7 +52,7 @@ export default function RoutineTab({ feedings = [], pumping = [], changes = [], 
     entries.forEach((entry) => {
       const start = new Date(entry.at);
       const end = entryEnd(entry, start);
-      const isPoint = entry.routineType !== "sleep";
+      const isPoint = entry.routineType !== "sleep" && entry.routineType !== "tummy";
       if (isPoint) {
         const key = `${dateKey(start)}-${start.getHours()}`;
         if (daySet.has(dateKey(start))) {
@@ -90,7 +92,7 @@ export default function RoutineTab({ feedings = [], pumping = [], changes = [], 
       <div className="routine-filters" role="group" aria-label="Filtrer les activités">
         {FILTERS.map(([id, label, color]) => (
           <button key={id} className={`routine-filter${filters.includes(id) ? " routine-filter-active" : ""}`} style={filters.includes(id) && color ? { "--routine-accent": color } : undefined} onClick={() => toggleFilter(id)}>
-            {id === "feeding" ? <Icons.Bottle /> : id === "pumping" ? <Icons.Pump /> : id === "diaper" ? <Icons.Droplet /> : <Icons.Moon />}
+            {id === "feeding" ? <Icons.Bottle /> : id === "pumping" ? <Icons.Pump /> : id === "diaper" ? <Icons.Droplet /> : id === "tummy" ? <Icons.BabyCrawl /> : <Icons.Moon />}
             {label}
           </button>
         ))}
@@ -110,7 +112,7 @@ export default function RoutineTab({ feedings = [], pumping = [], changes = [], 
                   {cell.map((entry, index) => {
                     const start = new Date(entry.at);
                     const end = entryEnd(entry, start);
-                    const isPoint = entry.routineType !== "sleep";
+                    const isPoint = entry.routineType !== "sleep" && entry.routineType !== "tummy";
                     const startsHere = start >= slotStart && start < slotEnd;
                     const endsHere = end <= slotEnd;
                     const minuteOffset = `${(start.getMinutes() / 60) * 100}%`;

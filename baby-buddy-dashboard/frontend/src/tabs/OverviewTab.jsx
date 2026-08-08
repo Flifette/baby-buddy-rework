@@ -32,7 +32,7 @@ import { useUnits, formatVolume } from "../utils/units";
 
 const COLLAPSED_COUNT = 2;
 
-export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRaw, sleepEntries, weeklySleep, changes, tummyTimes, weeklyTummyTimes, pumping = [], period = "week", onEditEntry, visibleTiles = {} }) {
+export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRaw, sleepEntries, weeklySleep, changes, tummyTimes, weeklyTummyTimes, pumping = [], milkWaste = [], period = "week", onEditEntry, visibleTiles = {} }) {
   const units = useUnits();
   const [expanded, setExpanded] = useState({});
   const [dayModal, setDayModal] = useState(null);
@@ -51,6 +51,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
   const totalPumpingConsumed = feedings
     .filter((f) => f.type === "breast milk" && f.method === "bottle")
     .reduce((s, f) => s + Number(f.amount || 0), 0);
+  const totalMilkWaste = milkWaste.reduce((s, entry) => s + Number(entry.amount || 0), 0);
   const pumpingTimeline = pumping
     .slice()
     .sort((a, b) => new Date(b.end || b.start || 0) - new Date(a.end || a.start || 0))
@@ -183,7 +184,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                 Aucun repas enregistré sur cette période
               </div>
             )}
-            {weeklyFeedings.some((d) => d.amount > 0) && (
+            {period !== "day" && weeklyFeedings.some((d) => d.amount > 0) && (
               <>
                 <div style={{ marginTop: 16, height: 120 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -238,7 +239,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                 Aucun sommeil enregistré sur cette période
               </div>
             )}
-            {sleepByDay.some((d) => d.hours > 0) && (
+            {period !== "day" && sleepByDay.some((d) => d.hours > 0) && (
               <>
                 <div style={{ marginTop: 16, height: 120 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -342,7 +343,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
         </div>) : null}
 
         {/* Pumping */}
-        <div className="fade-in fade-in-6">
+        {visibleTiles.pumping !== false ? (<div className="fade-in fade-in-6">
           <SectionCard title="Tirage de lait" icon={<Icons.Pump />} color={colors.pumping}>
             {pumpingTimeline.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
@@ -357,9 +358,11 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                 <div style={{ marginTop: 16, display: "flex", gap: 12, padding: "12px 16px", borderRadius: 12, background: "var(--bg)", border: "1px solid var(--border)" }}>
                   <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.pumping }}>{formatVolume(totalPumping)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Tiré</div></div>
                   <div style={{ width: 1, background: "var(--border)" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.feeding }}>{formatVolume(totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Au biberon</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.feeding }}>{formatVolume(totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Lait maternel au biberon</div></div>
                   <div style={{ width: 1, background: "var(--border)" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.growth }}>{formatVolume(totalPumping - totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Stock</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.milkWaste }}>{formatVolume(totalMilkWaste)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Non bu</div></div>
+                  <div style={{ width: 1, background: "var(--border)" }} />
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.growth }}>{formatVolume(totalPumping - totalPumpingConsumed - totalMilkWaste)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Stock</div></div>
                 </div>
               </div>
             ) : (
@@ -368,7 +371,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
               </div>
             )}
           </SectionCard>
-        </div>
+        </div>) : null}
 
         {/* Tummy Time (masqué) */}
         {visibleTiles.tummy === true ? (<div className="fade-in fade-in-6">

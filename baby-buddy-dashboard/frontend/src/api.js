@@ -1,5 +1,6 @@
 const API_BASE = "./api/baby-buddy";
 const CONFIG_PATH = "./api/config";
+const MILK_WASTE_PATH = "./api/milk-waste";
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}/${endpoint}`;
@@ -26,6 +27,19 @@ function qs(params) {
   );
   const s = new URLSearchParams(filtered).toString();
   return s ? `?${s}` : "";
+}
+
+async function dashboardRequest(path, options = {}) {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`API error ${response.status}: ${text}`);
+  }
+  if (response.status === 204) return null;
+  return response.json();
 }
 
 export const api = {
@@ -94,6 +108,13 @@ export const api = {
     request("pumping/", { method: "POST", body: JSON.stringify(data) }),
   updatePumping: (id, data) => request(`pumping/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
   deletePumping: (id) => request(`pumping/${id}/`, { method: "DELETE" }),
+
+  // Milk discarded after a bottle was started. Stored by this dashboard,
+  // separately from Baby Buddy feedings so it never counts as a meal.
+  getMilkWaste: (params) => dashboardRequest(`${MILK_WASTE_PATH}${qs(params)}`),
+  createMilkWaste: (data) => dashboardRequest(MILK_WASTE_PATH, { method: "POST", body: JSON.stringify(data) }),
+  updateMilkWaste: (id, data) => dashboardRequest(`${MILK_WASTE_PATH}/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteMilkWaste: (id) => dashboardRequest(`${MILK_WASTE_PATH}/${id}`, { method: "DELETE" }),
 
   // Notes
   getNotes: (params) => request(`notes/${qs(params)}`),

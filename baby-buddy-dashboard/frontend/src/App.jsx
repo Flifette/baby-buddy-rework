@@ -20,12 +20,13 @@ import NoteForm from "./components/forms/NoteForm";
 import WeightForm from "./components/forms/WeightForm";
 import HeightForm from "./components/forms/HeightForm";
 import PumpingForm from "./components/forms/PumpingForm";
+import MilkWasteForm from "./components/forms/MilkWasteForm";
 import TimerButton from "./components/TimerButton";
 import Modal from "./components/Modal";
 import "./styles.css";
 
 const TABS = [
-  { id: "overview", label: "Vue d’ensemble", icon: <Icons.Activity /> },
+  { id: "overview", label: "Aperçu", icon: <Icons.Eye /> },
   { id: "growth", label: "Croissance", icon: <Icons.TrendUp /> },
   { id: "day", label: "Journée", icon: <Icons.Sun /> },
   { id: "routine", label: "Routine", icon: <Icons.Calendar /> },
@@ -38,6 +39,7 @@ const ACTION_GROUPS = [
     actions: [
       { id: "feeding", label: "Repas", icon: <Icons.Bottle />, color: colors.feeding },
       { id: "pumping", label: "Tirage", icon: <Icons.Pump />, color: colors.pumping },
+      { id: "milkWaste", label: "Lait non bu", icon: <Icons.BottleOff />, color: colors.milkWaste },
       { id: "sleep", label: "Sommeil", icon: <Icons.Moon />, color: colors.sleep },
       { id: "diaper", label: "Changes", icon: <Icons.Droplet />, color: colors.diaper },
       { id: "tummy", label: "Temps sur le ventre", icon: <Icons.BabyCrawl />, color: colors.tummy },
@@ -70,7 +72,7 @@ const TILE_DEFAULTS = {
     feedingSummary: true, sleepSummary: true, diaperSummary: true, pumpingSummary: true,
     feedings: true, sleep: true, diapers: true, pumping: true, tummy: false,
   },
-  growth: { measurements: true, feedingChart: true, sleepChart: true, weightChart: true, heightChart: true, milkStock: true },
+  growth: { measurements: true, feedingSummary: true, sleepSummary: true, tummySummary: true, feedingChart: true, sleepChart: true, tummyChart: true, weightChart: true, heightChart: true, milkStock: true },
 };
 
 function loadTileVisibility() {
@@ -151,7 +153,7 @@ export default function App() {
 
 function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, setPeriod, modal, setModal, showActions, setShowActions, expandedGroup, setExpandedGroup, showTimerPicker, setShowTimerPicker, editingTimerId, setEditingTimerId, tileVisibility, setTileVisibility, showTileSettings, setShowTileSettings }) {
   const data = { ...rawData };
-  ["children", "feedings", "weeklyFeedings", "sleepEntries", "weeklySleep", "changes", "tummyTimes", "weeklyTummyTimes", "temperatures", "weights", "heights", "monthlyFeedings", "monthlySleep", "pumping", "notes"].forEach((key) => {
+  ["children", "feedings", "weeklyFeedings", "sleepEntries", "weeklySleep", "changes", "tummyTimes", "weeklyTummyTimes", "temperatures", "weights", "heights", "monthlyFeedings", "monthlySleep", "pumping", "milkWaste", "notes"].forEach((key) => {
     if (!Array.isArray(data[key])) data[key] = [];
   });
   const children = Array.isArray(data.children) ? data.children : [];
@@ -172,9 +174,17 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
             )}
           </div>
           <div>
-            <h1 className="baby-name">
-              {data.child?.first_name || "Baby"}
-            </h1>
+            <div className="baby-name-row">
+              <h1 className="baby-name">{data.child?.first_name || "Baby"}</h1>
+              {children.length >= 2 && (
+                <label className="child-picker-inline" title="Changer d’enfant">
+                  <select aria-label="Changer d’enfant" value={data.child?.id || ""} onChange={(event) => data.selectChild(Number(event.target.value))}>
+                    {children.map((child) => <option key={child.id} value={child.id}>{child.first_name}</option>)}
+                  </select>
+                  <span aria-hidden="true">⌄</span>
+                </label>
+              )}
+            </div>
             {data.child?.birth_date && (
               <span className="baby-age">{getAge(data.child.birth_date)}</span>
             )}
@@ -200,16 +210,6 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
           </button>
         </div>
       </header>
-
-      {/* Sélection de l’enfant lorsqu’il y en a plusieurs */}
-      {children.length >= 2 && (
-        <div className="child-switcher fade-in">
-          <label htmlFor="baby-child-select" style={{ color: "var(--text-dim)", fontSize: 12 }}>Enfant</label>
-          <select id="baby-child-select" value={data.child?.id || ""} onChange={(event) => data.selectChild(Number(event.target.value))}>
-            {children.map((c) => <option key={c.id} value={c.id}>{c.first_name}</option>)}
-          </select>
-        </div>
-      )}
 
       {/* Active Timer Bars */}
       {activeTimers.map((t) => (
@@ -243,7 +243,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
               <span
                 className="timer-elapsed"
                 style={{ cursor: "pointer" }}
-                title="Click to edit start time"
+                title="Modifier l’heure de début"
                 onClick={() => setEditingTimerId(t.id)}
               >
                 {formatElapsed(timer.elapsedMap[t.id] || 0)}
@@ -301,25 +301,29 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
             tummyTimes={data.tummyTimes}
             weeklyTummyTimes={data.weeklyTummyTimes}
             pumping={data.pumping}
+            milkWaste={data.milkWaste}
             period={period}
             visibleTiles={tileVisibility.overview}
             onEditEntry={(type, entry) => setModal({ type, entry })}
           />
         )}
         {activeTab === "day" && (
-          <DayTab feedings={data.feedings} pumping={data.pumping} changes={data.changes} sleepEntries={data.sleepEntries} tummyTimes={data.tummyTimes} temperatures={data.temperatures} weights={data.weights} heights={data.heights} notes={data.notes} onEditEntry={(type, entry) => setModal({ type, entry })} />
+          <DayTab feedings={data.feedings} pumping={data.pumping} milkWaste={data.milkWaste} changes={data.changes} sleepEntries={data.sleepEntries} tummyTimes={data.tummyTimes} temperatures={data.temperatures} weights={data.weights} heights={data.heights} notes={data.notes} onEditEntry={(type, entry) => setModal({ type, entry })} />
         )}
         {activeTab === "growth" && (
           <GrowthTab
             weights={data.weights}
             heights={data.heights}
-          monthlyFeedings={data.monthlyFeedings}
-          monthlySleep={data.monthlySleep}
-          pumping={data.pumping}
-          period={period}
-            childId={data.child?.id}
+            monthlyFeedings={data.monthlyFeedings}
+            monthlySleep={data.monthlySleep}
+            tummyTimes={data.tummyTimes}
+            pumping={data.pumping}
+            feedings={data.feedings}
+            milkWaste={data.milkWaste}
+            period={period}
             visibleTiles={tileVisibility.growth}
             onEditEntry={(type, entry) => setModal({ type, entry })}
+            onEditMilkWaste={(entry) => setModal({ type: "milkWaste", entry })}
           />
         )}
         {activeTab === "routine" && (
@@ -328,6 +332,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
             pumping={data.pumping}
             changes={data.changes}
             sleepEntries={data.sleepEntries}
+            tummyTimes={data.tummyTimes}
             period={period}
           />
         )}
@@ -343,8 +348,8 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       {showTileSettings && (
         <Modal title="Réglages des tuiles" onClose={() => setShowTileSettings(false)}>
           {[
-            ["overview", "Vue d’ensemble", [["feedingSummary", "Résumé des repas"], ["sleepSummary", "Résumé du sommeil"], ["diaperSummary", "Résumé des changes"], ["pumpingSummary", "Résumé du tirage"], ["feedings", "Repas récents"], ["sleep", "Sommeil"], ["diapers", "Changes"], ["pumping", "Tirage de lait"], ["tummy", "Temps sur le ventre"]]],
-            ["growth", "Croissance", [["measurements", "Mesures récentes"], ["feedingChart", "Repas quotidiens"], ["sleepChart", "Sommeil quotidien"], ["weightChart", "Évolution du poids"], ["heightChart", "Évolution de la taille"], ["milkStock", "Stock de lait"]]],
+            ["overview", "Aperçu", [["feedingSummary", "Résumé des repas"], ["sleepSummary", "Résumé du sommeil"], ["diaperSummary", "Résumé des changes"], ["pumpingSummary", "Résumé du tirage"], ["feedings", "Repas récents"], ["sleep", "Sommeil"], ["diapers", "Changes"], ["pumping", "Tirage de lait"], ["tummy", "Temps sur le ventre"]]],
+            ["growth", "Croissance", [["measurements", "Mesures récentes"], ["feedingSummary", "Résumé des repas"], ["sleepSummary", "Résumé du sommeil"], ["tummySummary", "Résumé du temps sur le ventre"], ["feedingChart", "Repas quotidiens"], ["sleepChart", "Sommeil quotidien"], ["tummyChart", "Temps sur le ventre quotidien"], ["weightChart", "Évolution du poids"], ["heightChart", "Évolution de la taille"], ["milkStock", "Stock de lait"]]],
           ].map(([view, title, items]) => (
             <section key={view} className="tile-settings-section">
               <h3>{title}</h3>
@@ -513,6 +518,9 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "pumping" && (
         <PumpingForm childId={data.child?.id} entry={modal.entry} onDone={handleFormDone} onClose={closeModal} />
+      )}
+      {modal?.type === "milkWaste" && (
+        <MilkWasteForm childId={data.child?.id} entry={modal.entry} onDone={handleFormDone} onClose={closeModal} />
       )}
     </div>
       </PeriodContext.Provider></UnitContext.Provider>
