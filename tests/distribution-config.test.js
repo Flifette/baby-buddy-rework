@@ -10,11 +10,15 @@ const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 test("repository metadata identifies the rework repository", async () => {
   const repository = await read("repository.yaml");
   const addon = await read("baby-buddy-dashboard/config.yaml");
+  const build = await read("baby-buddy-dashboard/build.yaml");
 
   assert.match(repository, /github\.com\/Flifette\/baby-buddy-rework/);
   assert.match(repository, /maintainer:\s*Flifette/);
   assert.match(addon, /slug:\s*"baby-buddy-dashboard"/);
   assert.match(addon, /github\.com\/Flifette\/baby-buddy-rework/);
+  assert.match(build, /amd64-base-python/);
+  assert.match(build, /aarch64-base-python/);
+  assert.doesNotMatch(build, /(armv7|armhf|i386)-base-python/);
 });
 
 test("Compose builds this repository and persists dashboard data", async () => {

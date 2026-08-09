@@ -31,7 +31,7 @@ Le lait non bu est propre au dashboard et persiste dans `/data/milk-waste.json`.
 
 Le slug historique `baby-buddy-dashboard` est volontairement conservé pour maintenir la compatibilité avec l’installation existante et ses données `/data`. Ce fork ne peut donc pas être installé côte à côte avec l’add-on d’origine sur la même instance Home Assistant.
 
-Architectures prises en charge : `amd64`, `aarch64`, `armv7`, `armhf` et `i386`.
+Architectures prises en charge : `amd64` et `aarch64`. Les anciennes images de base 32 bits déclarées par le dépôt d’origine ne sont plus publiées pour la base Python Home Assistant sélectionnée.
 
 ## Docker Compose
 

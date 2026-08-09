@@ -52,6 +52,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: frenck/action-addon-linter@v2.21
+        with:
+          path: baby-buddy-dashboard
 
   standalone-image:
     name: Standalone image
@@ -79,15 +81,6 @@ jobs:
           - arch: aarch64
             platform: linux/arm64
             build_from: ghcr.io/home-assistant/aarch64-base-python:3.14-alpine3.20
-          - arch: armv7
-            platform: linux/arm/v7
-            build_from: ghcr.io/home-assistant/armv7-base-python:3.14-alpine3.20
-          - arch: armhf
-            platform: linux/arm/v6
-            build_from: ghcr.io/home-assistant/armhf-base-python:3.14-alpine3.20
-          - arch: i386
-            platform: linux/386
-            build_from: ghcr.io/home-assistant/i386-base-python:3.14-alpine3.20
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: docker/setup-qemu-action@v4

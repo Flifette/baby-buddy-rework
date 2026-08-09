@@ -33,7 +33,7 @@ Uneaten milk is stored by this dashboard in `/data/milk-waste.json`. It reduces 
 
 The add-on retains the historical slug `baby-buddy-dashboard` so existing installations and their `/data` remain compatible. Consequently, this fork and the original add-on cannot be installed side-by-side in the same Home Assistant instance.
 
-Supported Home Assistant architectures: `amd64`, `aarch64`, `armv7`, `armhf`, and `i386`.
+Supported Home Assistant architectures: `amd64` and `aarch64`. The legacy 32-bit base images previously declared by the upstream repository are no longer published for the selected Home Assistant Python base.
 
 ## Docker Compose
 
