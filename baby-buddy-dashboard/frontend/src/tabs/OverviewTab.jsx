@@ -25,7 +25,7 @@ import {
   aggregateSleepByDay,
   aggregateTummyByDay,
   aggregateByPeriod,
-  getEntriesForDay,
+  getEntriesForDateKey,
   parseDuration,
   applyMilkWasteToFeedings,
 } from "../utils/formatters";
@@ -86,18 +86,20 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
   const handleChartClick = (data, type) => {
     if (!data || !data.activeLabel) return;
     const label = data.activeLabel;
-    const value = data.activePayload?.[0]?.value;
-    setSelectedBar({ type, label, value });
+    const payload = data.activePayload?.[0];
+    const value = payload?.value;
+    const dateKey = payload?.payload?.dateKey;
+    setSelectedBar({ type, label, value, dateKey });
   };
 
-  const openDayModal = (day, type) => {
+  const openDayModal = (day, dateKey, type) => {
     let dayData = [];
     if (type === "feeding") {
-      dayData = getEntriesForDay(feedings, day, "start");
+      dayData = getEntriesForDateKey(feedings, dateKey, "start");
     } else if (type === "sleep") {
-      dayData = getEntriesForDay(sleepEntries, day, "start");
+      dayData = getEntriesForDateKey(sleepEntries, dateKey, "start");
     } else if (type === "tummy") {
-      dayData = getEntriesForDay(tummyTimes, day, "start");
+      dayData = getEntriesForDateKey(tummyTimes, dateKey, "start");
     }
     setSelectedBar(null);
     setDayModal({ day, type, data: dayData });
@@ -206,7 +208,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                     value={selectedBar.value}
                     unit={units.volume}
                     color={colors.feeding}
-                    onViewEntries={() => openDayModal(selectedBar.label, "feeding")}
+                    onViewEntries={() => openDayModal(selectedBar.label, selectedBar.dateKey, "feeding")}
                     onDismiss={() => setSelectedBar(null)}
                   />
                 )}
@@ -261,7 +263,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                     value={selectedBar.value}
                     unit="H"
                     color={colors.sleep}
-                    onViewEntries={() => openDayModal(selectedBar.label, "sleep")}
+                    onViewEntries={() => openDayModal(selectedBar.label, selectedBar.dateKey, "sleep")}
                     onDismiss={() => setSelectedBar(null)}
                   />
                 )}
@@ -398,7 +400,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                     value={selectedBar.value}
                     unit="min"
                     color={colors.tummy}
-                    onViewEntries={() => openDayModal(selectedBar.label, "tummy")}
+                    onViewEntries={() => openDayModal(selectedBar.label, selectedBar.dateKey, "tummy")}
                     onDismiss={() => setSelectedBar(null)}
                   />
                 ) : (

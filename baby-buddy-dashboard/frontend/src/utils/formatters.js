@@ -240,13 +240,13 @@ export function aggregateByPeriod(entries, kind, period = "week", subtractEntrie
   const subtractions = Array.isArray(subtractEntries) ? subtractEntries : [];
   if (period === "all") {
     const keys = [...new Set([...source, ...subtractions].map((e) => entryDateStr(e.start || e.time || e.date)).filter(Boolean))].sort();
-    return keys.map((key) => ({ day: new Date(`${key}T12:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }), amount: Math.max(0, source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0) - subtractions.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0)), hours: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration), 0), minutes: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration) * 60, 0) }));
+    return keys.map((key) => ({ day: new Date(`${key}T12:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }), dateKey: key, amount: Math.max(0, source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0) - subtractions.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0)), hours: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration), 0), minutes: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration) * 60, 0) }));
   }
   const result = getLastNDays(days);
   const sums = Object.fromEntries(result.map((d) => [d.dateStr, { amount: 0, hours: 0, minutes: 0 }]));
   source.forEach((e) => { const key = entryDateStr(e.start || e.time || e.date); if (!sums[key]) return; sums[key].amount += Number(e.amount || 0); sums[key].hours += parseDuration(e.duration); sums[key].minutes += parseDuration(e.duration) * 60; });
   subtractions.forEach((e) => { const key = entryDateStr(e.start || e.time || e.date); if (sums[key]) sums[key].amount -= Number(e.amount || 0); });
-  return result.map((d) => ({ day: d.label, amount: Math.max(0, Math.round(sums[d.dateStr].amount)), hours: Math.round(sums[d.dateStr].hours * 10) / 10, minutes: Math.round(sums[d.dateStr].minutes) }));
+  return result.map((d) => ({ day: d.label, dateKey: d.dateStr, amount: Math.max(0, Math.round(sums[d.dateStr].amount)), hours: Math.round(sums[d.dateStr].hours * 10) / 10, minutes: Math.round(sums[d.dateStr].minutes) }));
 }
 
 function getLastNDays(n) {
@@ -279,6 +279,7 @@ export function dailyFeedingTotals(entries, numDays = 30, subtractEntries = []) 
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, amount]) => ({
         date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        dateKey: key,
         amount: Math.max(0, Math.round(amount)),
       }));
   }
@@ -293,7 +294,7 @@ export function dailyFeedingTotals(entries, numDays = 30, subtractEntries = []) 
     const key = entryDateStr(e.time || e.start || e.date);
     if (key in sums) sums[key] -= parseFloat(e.amount || 0);
   });
-  const result = days.map((d) => ({ date: d.label, amount: Math.max(0, Math.round(sums[d.dateStr])) }));
+  const result = days.map((d) => ({ date: d.label, dateKey: d.dateStr, amount: Math.max(0, Math.round(sums[d.dateStr])) }));
   const firstNonZero = result.findIndex((d) => d.amount > 0);
   return firstNonZero > 0 ? result.slice(firstNonZero) : result;
 }
@@ -321,6 +322,13 @@ export function getEntriesForDate(entries, dateLabel, dateKey = "start") {
   });
 }
 
+export function getEntriesForDateKey(entries, targetDateKey, dateField = "start") {
+  if (!targetDateKey) return [];
+  return entries.filter((entry) =>
+    entryDateStr(entry[dateField] || entry.time || entry.date) === targetDateKey
+  );
+}
+
 export function dailySleepTotals(entries, numDays = 30) {
   if (numDays == null) {
     const sums = new Map();
@@ -332,6 +340,7 @@ export function dailySleepTotals(entries, numDays = 30) {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, hours]) => ({
         date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        dateKey: key,
         hours: Math.round(hours * 10) / 10,
       }));
   }
@@ -342,7 +351,7 @@ export function dailySleepTotals(entries, numDays = 30) {
     const key = entryDateStr(e.start);
     if (key in sums) sums[key] += parseDuration(e.duration);
   });
-  const result = days.map((d) => ({ date: d.label, hours: Math.round(sums[d.dateStr] * 10) / 10 }));
+  const result = days.map((d) => ({ date: d.label, dateKey: d.dateStr, hours: Math.round(sums[d.dateStr] * 10) / 10 }));
   const firstNonZero = result.findIndex((d) => d.hours > 0);
   return firstNonZero > 0 ? result.slice(firstNonZero) : result;
 }
@@ -358,6 +367,7 @@ export function dailyTummyTotals(entries, numDays = 30) {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, minutes]) => ({
         date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        dateKey: key,
         minutes: Math.round(minutes),
       }));
   }
@@ -368,7 +378,7 @@ export function dailyTummyTotals(entries, numDays = 30) {
     const key = entryDateStr(entry.start);
     if (key in sums) sums[key] += parseDuration(entry.duration) * 60;
   });
-  const result = days.map((day) => ({ date: day.label, minutes: Math.round(sums[day.dateStr]) }));
+  const result = days.map((day) => ({ date: day.label, dateKey: day.dateStr, minutes: Math.round(sums[day.dateStr]) }));
   const firstNonZero = result.findIndex((day) => day.minutes > 0);
   return firstNonZero > 0 ? result.slice(firstNonZero) : result;
 }

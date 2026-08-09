@@ -108,3 +108,7 @@
 
 - Définition des réglages initiaux : Temps sur le ventre masqué dans Aperçu, et Lait non bu ainsi que les deux tuiles Temps sur le ventre masqués dans Croissance.
 - Conservation des préférences personnalisées de chaque utilisateur après leur premier réglage.
+
+# 1.4.18
+
+- Correction de « Voir les occurrences » dans Aperçu et Croissance grâce à une clé de date stable, indépendante du libellé localisé affiché dans les graphiques.
