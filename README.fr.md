@@ -33,6 +33,10 @@ Le lait non bu est propre au dashboard et persiste dans `/data/milk-waste.json`.
   </tr>
 </table>
 
+## Cartes et helpers Home Assistant
+
+L’add-on n’est pas la seule manière d’utiliser Baby Buddy dans Home Assistant. Le guide [Exemples Home Assistant pour Baby Buddy](examples/home-assistant/README.md) fournit une base générique pour créer des formulaires Lovelace, des helpers, une sélection dynamique des enfants, des boutons rapides et des activités chronométrées dans n’importe quelle vue.
+
 ## Installation Home Assistant
 
 1. Ouvrir **Paramètres > Modules complémentaires > Boutique des modules complémentaires**.
