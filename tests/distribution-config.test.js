@@ -65,3 +65,39 @@ test("the documented screenshot gallery contains valid JPEG files", async () => 
     assert.deepEqual([...image.subarray(-2)], [0xff, 0xd9]);
   }
 });
+
+test("Home Assistant examples and their screenshots remain linked", async () => {
+  const readme = await read("README.md");
+  const readmeFr = await read("README.fr.md");
+  const guide = await read("examples/home-assistant/README.md");
+  const screenshots = [
+    "activity-timer.jpg",
+    "action-menu.jpg",
+    "feeding-form.jpg",
+    "quick-actions.jpg",
+  ];
+
+  assert.match(readme, /examples\/home-assistant\/README\.md/);
+  assert.match(readmeFr, /examples\/home-assistant\/README\.md/);
+  assert.match(guide, /babybuddy\.add_feeding/);
+  assert.match(guide, /integration_entities\('babybuddy'\)/);
+  assert.doesNotMatch(guide, /REMPLACER_PAR_LE_JETON_API[^\n]*[A-Za-z0-9]{20,}/);
+
+  for (const filename of screenshots) {
+    assert.match(guide, new RegExp(`screenshots/${filename}`));
+    const image = await readFile(path.join(root, "examples", "home-assistant", "screenshots", filename));
+    assert.deepEqual([...image.subarray(0, 2)], [0xff, 0xd8]);
+    assert.deepEqual([...image.subarray(-2)], [0xff, 0xd9]);
+  }
+});
+
+test("the project acknowledgements remain visible in both readmes", async () => {
+  const readme = await read("README.md");
+  const readmeFr = await read("README.fr.md");
+
+  for (const document of [readme, readmeFr]) {
+    assert.match(document, /mbentancour\/baby-buddy-dashboard/);
+    assert.match(document, /herveaurel\/HomeAssistant/);
+    assert.match(document, /Codex/i);
+  }
+});

@@ -4,6 +4,14 @@ Dashboard indépendant en français pour [Baby Buddy](https://github.com/babybud
 
 Ce projet est dérivé de [mbentancour/baby-buddy-dashboard](https://github.com/mbentancour/baby-buddy-dashboard) sous licence MIT. L’architecture d’origine est conservée, tandis que l’interface et la gestion des données ont été largement retravaillées.
 
+## À propos et remerciements
+
+Je ne suis pas un développeur confirmé : je débute, et ce projet a été réalisé en grande partie avec l’accompagnement et sous la supervision de Codex. Je le partage sans prétendre pouvoir en assurer la maintenance indéfiniment, mais avec l’envie que ce travail puisse être utile à d’autres.
+
+Merci à [mbentancour/baby-buddy-dashboard](https://github.com/mbentancour/baby-buddy-dashboard) pour cette formidable base de travail et pour tout le travail déjà accompli, qui m’a donné beaucoup d’idées pour ce dashboard.
+
+Mais je tiens surtout à adresser cent millions de mercis à [herveaurel/HomeAssistant](https://github.com/herveaurel/HomeAssistant). C’est son fabuleux dashboard « Mad-Geek » qui m’a donné envie de me lancer dans Home Assistant. Pendant près de deux ans, son travail m’a passionné, inspiré et aidé à comprendre tout un univers que je ne connaissais pas. Sans ce partage, je ne serais probablement jamais arrivé jusque-là.
+
 ## Fonctionnalités
 
 - Onglets Aperçu, Croissance, Journée, Routine et Notes
@@ -32,6 +40,10 @@ Le lait non bu est propre au dashboard et persiste dans `/data/milk-waste.json`.
     <td align="center"><strong>Tuiles personnalisables</strong><br><img src="screenshots/tile-settings.jpg" alt="Réglages des tuiles" width="440"></td>
   </tr>
 </table>
+
+## Cartes et helpers Home Assistant
+
+L’add-on n’est pas la seule manière d’utiliser Baby Buddy dans Home Assistant. Le guide [Exemples Home Assistant pour Baby Buddy](examples/home-assistant/README.md) fournit une base générique pour créer des formulaires Lovelace, des helpers, une sélection dynamique des enfants, des boutons rapides et des activités chronométrées dans n’importe quelle vue.
 
 ## Installation Home Assistant
 
