@@ -92,7 +92,7 @@ case "tummy": return <Icons.BabyCrawl />;
               <TimelineItem
                 time={`${s.start}–${s.end}`}
                 label={`${s.duration.toFixed(1)} H${s.nap ? " · Sieste" : ""}`}
-                detail={`${s.start} to ${s.end}`}
+                detail={`${s.start} à ${s.end}`}
                 color={colors.sleep}
                 isLast={i === arr.length - 1}
               />
@@ -117,7 +117,7 @@ case "tummy": return <Icons.BabyCrawl />;
               <TimelineItem
                 time={new Date(t.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 label={`${Math.round(parseDuration(t.duration) * 60)} min${t.milestone ? ` · ${t.milestone}` : ""}`}
-                detail={`${new Date(t.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to ${new Date(t.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                detail={`${new Date(t.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} à ${new Date(t.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
                 color={colors.tummy}
                 isLast={i === arr.length - 1}
               />

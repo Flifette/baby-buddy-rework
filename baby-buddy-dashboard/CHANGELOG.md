@@ -83,3 +83,28 @@
 
 - Traduction complète des types et méthodes de repas provenant de Baby Buddy, dont « parent fed » et « self fed ».
 - Traduction des derniers libellés anglais dans les occurrences, les notes, les mesures et le minuteur.
+
+# 1.4.13
+
+- Correction du lait non bu : il réduit désormais les quantités réellement bues sans être déduit une seconde fois du stock.
+- Application du calcul net aux résumés et graphiques de repas dans Aperçu et Croissance.
+- Remplacement de « to » par « à » dans les plages horaires.
+
+# 1.4.14
+
+- Affichage de la quantité nette et du lait non bu directement dans les repas récents, avec association au dernier biberon de lait maternel de la journée.
+- Application de cette association aux totaux, moyennes et graphiques de Croissance pour toutes les temporalités.
+
+# 1.4.15
+
+- Ajout d’une bulle Lait non bu dans Croissance : total pour Jour et moyenne quotidienne pour les autres temporalités.
+- Ajout du réglage indépendant « Résumé du lait non bu » dans les réglages de Croissance.
+
+# 1.4.16
+
+- Déplacement de la bulle Lait non bu juste après la bulle Repas dans Croissance et dans l’ordre des réglages.
+
+# 1.4.17
+
+- Définition des réglages initiaux : Temps sur le ventre masqué dans Aperçu, et Lait non bu ainsi que les deux tuiles Temps sur le ventre masqués dans Croissance.
+- Conservation des préférences personnalisées de chaque utilisateur après leur premier réglage.

@@ -57,6 +57,47 @@ export function formatDuration(durationStr) {
   return `${hours.toFixed(1)} H`;
 }
 
+export function applyMilkWasteToFeedings(feedings = [], milkWaste = []) {
+  const adjusted = feedings.map((entry) => ({
+    ...entry,
+    _originalEntry: entry,
+    _originalAmount: entry.amount,
+    _milkWasteAmount: 0,
+    amount: entry.amount == null ? entry.amount : Number(entry.amount || 0),
+  }));
+
+  const wasteEntries = milkWaste
+    .filter((entry) => entry?.time && Number(entry.amount || 0) > 0)
+    .slice()
+    .sort((left, right) => new Date(left.time) - new Date(right.time));
+
+  wasteEntries.forEach((waste) => {
+    let remaining = Number(waste.amount || 0);
+    const wasteTime = new Date(waste.time).getTime();
+    const wasteDay = entryDateStr(waste.time);
+    const candidates = adjusted
+      .map((entry, index) => ({ entry, index, timestamp: new Date(entry.end || entry.start).getTime() }))
+      .filter(({ entry, timestamp }) =>
+        entry.type === "breast milk"
+        && entry.method === "bottle"
+        && Number(entry.amount || 0) > 0
+        && entryDateStr(entry.end || entry.start) === wasteDay
+        && timestamp <= wasteTime)
+      .sort((left, right) => right.timestamp - left.timestamp);
+
+    candidates.forEach(({ index }) => {
+      if (remaining <= 0) return;
+      const available = Number(adjusted[index].amount || 0);
+      const deducted = Math.min(available, remaining);
+      adjusted[index].amount = available - deducted;
+      adjusted[index]._milkWasteAmount += deducted;
+      remaining -= deducted;
+    });
+  });
+
+  return adjusted;
+}
+
 export function toFeedingTimeline(feedings, volumeUnit = "mL") {
   const methodLabels = {
     bottle: "Biberon",
@@ -73,15 +114,20 @@ export function toFeedingTimeline(feedings, volumeUnit = "mL") {
     "solid food": "Aliments solides",
   };
 
-  return feedings.map((f) => ({
-    time: formatTime(f.end || f.start),
-    label: `${f.amount ? (typeof volumeUnit === "function" ? volumeUnit(f.amount) : f.amount + " " + volumeUnit) : ""} ${methodLabels[f.method] || typeLabels[f.type] || f.method || f.type || ""}`.trim() || "Repas",
-    detail: timeAgo(f.end || f.start),
-    amount: f.amount || 0,
-    type: f.type,
-    method: f.method,
-    entry: f,
-  }));
+  const formatAmount = (amount) => typeof volumeUnit === "function" ? volumeUnit(amount) : `${amount} ${volumeUnit}`;
+  return feedings.map((f) => {
+    const hasAmount = f.amount != null || f._originalAmount != null;
+    const wasteLabel = Number(f._milkWasteAmount || 0) > 0 ? ` · ${formatAmount(f._milkWasteAmount)} non bu` : "";
+    return {
+      time: formatTime(f.end || f.start),
+      label: `${hasAmount ? formatAmount(Number(f.amount || 0)) : ""} ${methodLabels[f.method] || typeLabels[f.type] || f.method || f.type || ""}${wasteLabel}`.trim() || "Repas",
+      detail: timeAgo(f.end || f.start),
+      amount: f.amount || 0,
+      type: f.type,
+      method: f.method,
+      entry: f._originalEntry || f,
+    };
+  });
 }
 
 export function toDiaperTimeline(changes) {
@@ -188,17 +234,19 @@ export function aggregateTummyByDay(entries) {
   return days.map((d) => ({ day: d.label, minutes: Math.round(sums[d.dateStr]) }));
 }
 
-export function aggregateByPeriod(entries, kind, period = "week") {
+export function aggregateByPeriod(entries, kind, period = "week", subtractEntries = []) {
   const days = { day: 1, week: 7, month: 30, halfyear: 183, year: 365 }[period] || 7;
   const source = Array.isArray(entries) ? entries : [];
+  const subtractions = Array.isArray(subtractEntries) ? subtractEntries : [];
   if (period === "all") {
-    const keys = [...new Set(source.map((e) => entryDateStr(e.start || e.time || e.date)).filter(Boolean))].sort();
-    return keys.map((key) => ({ day: new Date(`${key}T12:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }), amount: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0), hours: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration), 0), minutes: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration) * 60, 0) }));
+    const keys = [...new Set([...source, ...subtractions].map((e) => entryDateStr(e.start || e.time || e.date)).filter(Boolean))].sort();
+    return keys.map((key) => ({ day: new Date(`${key}T12:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }), amount: Math.max(0, source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0) - subtractions.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0)), hours: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration), 0), minutes: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration) * 60, 0) }));
   }
   const result = getLastNDays(days);
   const sums = Object.fromEntries(result.map((d) => [d.dateStr, { amount: 0, hours: 0, minutes: 0 }]));
   source.forEach((e) => { const key = entryDateStr(e.start || e.time || e.date); if (!sums[key]) return; sums[key].amount += Number(e.amount || 0); sums[key].hours += parseDuration(e.duration); sums[key].minutes += parseDuration(e.duration) * 60; });
-  return result.map((d) => ({ day: d.label, amount: Math.round(sums[d.dateStr].amount), hours: Math.round(sums[d.dateStr].hours * 10) / 10, minutes: Math.round(sums[d.dateStr].minutes) }));
+  subtractions.forEach((e) => { const key = entryDateStr(e.start || e.time || e.date); if (sums[key]) sums[key].amount -= Number(e.amount || 0); });
+  return result.map((d) => ({ day: d.label, amount: Math.max(0, Math.round(sums[d.dateStr].amount)), hours: Math.round(sums[d.dateStr].hours * 10) / 10, minutes: Math.round(sums[d.dateStr].minutes) }));
 }
 
 function getLastNDays(n) {
@@ -216,18 +264,22 @@ function getLastNDays(n) {
   return result;
 }
 
-export function dailyFeedingTotals(entries, numDays = 30) {
+export function dailyFeedingTotals(entries, numDays = 30, subtractEntries = []) {
   if (numDays == null) {
     const sums = new Map();
     entries.forEach((entry) => {
       const key = entryDateStr(entry.start || entry.time || entry.date);
       sums.set(key, (sums.get(key) || 0) + parseFloat(entry.amount || 0));
     });
+    subtractEntries.forEach((entry) => {
+      const key = entryDateStr(entry.time || entry.start || entry.date);
+      sums.set(key, (sums.get(key) || 0) - parseFloat(entry.amount || 0));
+    });
     return [...sums.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, amount]) => ({
         date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
-        amount: Math.round(amount),
+        amount: Math.max(0, Math.round(amount)),
       }));
   }
   const days = getLastNDays(numDays);
@@ -237,7 +289,11 @@ export function dailyFeedingTotals(entries, numDays = 30) {
     const key = entryDateStr(e.start || e.time || e.date);
     if (key in sums) sums[key] += parseFloat(e.amount || 0);
   });
-  const result = days.map((d) => ({ date: d.label, amount: Math.round(sums[d.dateStr]) }));
+  subtractEntries.forEach((e) => {
+    const key = entryDateStr(e.time || e.start || e.date);
+    if (key in sums) sums[key] -= parseFloat(e.amount || 0);
+  });
+  const result = days.map((d) => ({ date: d.label, amount: Math.max(0, Math.round(sums[d.dateStr])) }));
   const firstNonZero = result.findIndex((d) => d.amount > 0);
   return firstNonZero > 0 ? result.slice(firstNonZero) : result;
 }
