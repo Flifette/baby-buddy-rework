@@ -1,5 +1,13 @@
 # Changelog
 
+# 1.4.19
+
+- Préparation de la distribution publique du fork sans modification du comportement du dashboard.
+- Correction des métadonnées du dépôt et ajout de la traduction française des réglages Home Assistant.
+- Ajout des installations Docker Compose, Docker autonome et développement local Windows, avec persistance du lait non bu.
+- Ajout des validations CI multi-architecture et de la publication optionnelle d’images GHCR.
+- Validation du support Home Assistant actuel sur amd64 et aarch64 ; retrait des images 32 bits obsolètes qui n’étaient plus publiées.
+
 ## Rework initiale
 
 - Ajout des vues Vue d’ensemble, Croissance, Journée et Routine.

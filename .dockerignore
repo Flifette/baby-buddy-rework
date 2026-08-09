@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.local-data
+.nas-staging
+backups
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+screenshots
+tests

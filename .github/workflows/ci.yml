@@ -1,0 +1,95 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+    branches:
+      - dev
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: baby-buddy-dashboard/frontend
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: baby-buddy-dashboard/frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: baby-buddy-dashboard/backend/requirements.txt
+      - run: python -m pip install -r baby-buddy-dashboard/backend/requirements.txt
+      - run: python -m compileall -q baby-buddy-dashboard/backend
+      - run: python -c "import sys; sys.path.insert(0, 'baby-buddy-dashboard'); import backend.server"
+
+  addon-metadata:
+    name: Home Assistant add-on metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: frenck/action-addon-linter@v2.21
+        with:
+          path: baby-buddy-dashboard
+
+  standalone-image:
+    name: Standalone image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          tags: baby-buddy-dashboard-rework:ci
+
+  addon-images:
+    name: Add-on image (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            build_from: ghcr.io/home-assistant/amd64-base-python:3.14-alpine3.20
+          - arch: aarch64
+            platform: linux/arm64
+            build_from: ghcr.io/home-assistant/aarch64-base-python:3.14-alpine3.20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: baby-buddy-dashboard
+          file: baby-buddy-dashboard/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false
+          build-args: |
+            BUILD_FROM=${{ matrix.build_from }}
