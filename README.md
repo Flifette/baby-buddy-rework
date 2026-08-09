@@ -1,242 +1,133 @@
-# Baby Buddy Dashboard
+# Baby Buddy Dashboard Rework
 
-A modern, responsive dashboard for [Baby Buddy](https://github.com/babybuddy/babybuddy), built as a Home Assistant add-on. Provides a clean interface for viewing and logging baby care activities - feedings, sleep, diaper changes, tummy time, temperature, growth, and more.
+An independent, French-first dashboard for [Baby Buddy](https://github.com/babybuddy/babybuddy), available as a Home Assistant add-on, a standalone Docker container, or a local development application.
 
-![Stack](https://img.shields.io/badge/React-18-blue) ![Stack](https://img.shields.io/badge/FastAPI-Python-green) ![Stack](https://img.shields.io/badge/Home%20Assistant-Add--on-blue)
+This project is derived from [mbentancour/baby-buddy-dashboard](https://github.com/mbentancour/baby-buddy-dashboard) and distributed under the MIT License. It keeps the original architecture while adding an extensively reworked interface and data model.
 
-## Screenshots
-
-| Overview | Growth |
-|----------|--------|
-| ![Overview](screenshots/overview.png) | ![Growth](screenshots/growth.png) |
+[Documentation française](README.fr.md)
 
 ## Features
 
-- **Overview dashboard** — daily stats, timelines, and charts for feedings, sleep, diapers, and tummy time
-- **Growth tracking** — 30-day feeding totals, sleep averages, weight, and height trend charts
-- **Quick logging** — grouped floating action button to quickly log feedings, sleep, diaper changes, tummy time, temperature, weight, height, and notes
-- **Multiple timers** — run concurrent timers for overlapping activities (feeding, sleep, tummy time)
-- **Metric / Imperial** — configurable unit labels (kg/lb, cm/in, mL/oz, °C/°F) with no data conversion
-- **Demo mode** — built-in mock data to preview the dashboard without a Baby Buddy instance
-- **Auto-refresh** — configurable polling interval keeps the dashboard up to date
-- **Dark theme** — designed for always-on displays and low-light nursery use
-- **Responsive** — works on desktop, tablet, and phone screens
+- Overview, Growth, Day, Routine, and Notes views
+- Responsive desktop, tablet, and mobile interface
+- Quick create, edit, and delete forms
+- Feeding, sleep, diaper, pumping, tummy-time, measurement, and note tracking
+- Configurable periods, charts, cards, and per-browser preferences
+- Estimated breast-milk stock and dashboard-only uneaten-milk occurrences
+- French localization of Baby Buddy activity data
 
-## Architecture
+Uneaten milk is stored by this dashboard in `/data/milk-waste.json`. It reduces the amount actually consumed but is never sent to Baby Buddy as another feeding and is never deducted from stock a second time.
 
-```
-┌─────────────┐       ┌──────────────┐       ┌─────────────┐
-│  Browser    │──────▶│  FastAPI     │──────▶│ Baby Buddy  │
-│ (React SPA) │◀──────│  Backend     │◀──────│   API       │
-└─────────────┘       └──────────────┘       └─────────────┘
-     :5173                 :8099
-  (dev only)          (proxy + static)
-```
+## Screenshots
 
-- **Frontend** — React 18 + Vite, with Recharts for data visualization
-- **Backend** — FastAPI (Python) proxy server that authenticates with Baby Buddy's API and serves the React SPA
-- **Deployment** — Docker container as a Home Assistant add-on, or run locally for development
+<table>
+  <tr>
+    <td align="center"><strong>Overview</strong><br><img src="screenshots/overview-current.jpg" alt="Overview dashboard" width="440"></td>
+    <td align="center"><strong>Growth and milk stock</strong><br><img src="screenshots/growth-current.jpg" alt="Growth charts and milk stock" width="440"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Day timeline</strong><br><img src="screenshots/day-timeline.jpg" alt="Daily activity timeline" width="440"></td>
+    <td align="center"><strong>Routine</strong><br><img src="screenshots/routine-overview.jpg" alt="Routine visualization" width="440"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Notes</strong><br><img src="screenshots/notes-view.jpg" alt="Notes view" width="440"></td>
+    <td align="center"><strong>Personalized tiles</strong><br><img src="screenshots/tile-settings.jpg" alt="Tile settings" width="440"></td>
+  </tr>
+</table>
 
-The backend acts as an API proxy so the Baby Buddy API key stays server-side and is never exposed to the browser.
+## Home Assistant add-on
 
-## Home Assistant Add-on Installation
+1. Open **Settings > Add-ons > Add-on Store**.
+2. Open **Repositories** from the three-dot menu.
+3. Add:
 
-1. In Home Assistant, go to **Settings > Add-ons > Add-on Store**
-2. Click the **three dots** (top right) > **Repositories**
-3. Add this repository URL:
+   ```text
+   https://github.com/Flifette/baby-buddy-rework
    ```
-   https://github.com/mbentancour/baby-buddy-dashboard
-   ```
-4. Find **Baby Buddy Dashboard** in the store and click **Install**
-5. Configure the add-on:
-   - **Baby Buddy URL** — full URL to your instance (e.g., `http://192.168.1.100:8000`)
-   - **API Key** — found in Baby Buddy under *Settings > API Key*
-   - **Refresh Interval** — polling interval in seconds (default: 30)
-   - **Unit System** — `metric` or `imperial` (labels only, no conversion)
-   - **Demo Mode** — enable to preview with mock data (no Baby Buddy required)
-6. Start the add-on — the dashboard appears in the Home Assistant sidebar
+
+4. Install **Baby Buddy Dashboard Rework**.
+5. Configure the Baby Buddy URL and API key, then start the add-on.
+
+The add-on retains the historical slug `baby-buddy-dashboard` so existing installations and their `/data` remain compatible. Consequently, this fork and the original add-on cannot be installed side-by-side in the same Home Assistant instance.
+
+Supported Home Assistant architectures: `amd64` and `aarch64`. The legacy 32-bit base images previously declared by the upstream repository are no longer published for the selected Home Assistant Python base.
 
 ## Docker Compose
 
-Run the dashboard using Docker Compose — no Home Assistant required. You can either connect to an existing Baby Buddy instance or run one side-by-side.
-
-1. Copy the example environment file:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Edit `.env` with your settings:
-
-   ```
-   BABY_BUDDY_URL=http://your-babybuddy-server:8000
-   BABY_BUDDY_API_KEY=your_api_key_here
-   ```
-
-3. Start the dashboard:
-
-   ```bash
-   docker compose up -d
-   ```
-
-   The dashboard will be available at `http://localhost:8099`.
-
-### Running Baby Buddy side-by-side
-
-If you don't have a Baby Buddy instance yet, use the `full` profile to start one alongside the dashboard:
+Clone this repository, create the environment file, and build the dashboard from the checked-out source:
 
 ```bash
-docker compose --profile full up -d
+cp .env.example .env
+docker compose up -d --build
 ```
 
-This starts:
-- **Baby Buddy** on `http://localhost:8000`
-- **Dashboard** on `http://localhost:8099` (auto-connects to the Baby Buddy container)
+For an existing Baby Buddy server, set `BABY_BUDDY_URL` in `.env` to an address reachable from the container.
 
-On first run, open Baby Buddy at `http://localhost:8000`, create an account, then grab your API key from *Settings > API Key* and add it to `.env`. Restart with `docker compose --profile full up -d`.
-
-## Local Development
-
-### Prerequisites
-
-- Node.js (18+)
-- Python 3.10+
-- A running Baby Buddy instance
-
-### Setup
-
-1. Copy the example environment file and fill in your Baby Buddy connection details:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Then edit `.env`:
-
-   ```
-   BABY_BUDDY_URL=http://192.168.1.100:8000
-   BABY_BUDDY_API_KEY=your_api_key_here
-   REFRESH_INTERVAL=30
-   UNIT_SYSTEM=metric
-   ```
-
-2. Run the development servers:
-
-   ```bash
-   ./run_local.sh
-   ```
-
-   This starts:
-   - **Backend** (FastAPI) on `http://localhost:8099` — proxies API requests to Baby Buddy
-   - **Frontend** (Vite dev server) on `http://localhost:5173` — hot-reloads on code changes
-
-3. Open `http://localhost:5173` in your browser
-
-The script auto-installs npm and pip dependencies on first run. Press `Ctrl+C` to stop both servers.
-
-> **Note:** `.env` is gitignored so your credentials are never committed.
-
-### Building for production
+To run Baby Buddy and the dashboard together:
 
 ```bash
-cd baby-buddy-dashboard/frontend
-npm run build
+docker compose --profile full up -d --build
 ```
 
-The built files are output to `baby-buddy-dashboard/frontend/dist/`.
+Baby Buddy is then available on port `8000`, and the dashboard on port `8099`. The named volumes `babybuddy_data` and `dashboard_data` preserve their respective data.
 
-## Project Structure
+## Standalone Docker
 
-This repository follows the [Home Assistant add-on repository](https://developers.home-assistant.io/docs/add-ons/repository/) layout — each add-on lives in its own subdirectory.
-
+```bash
+docker build -t baby-buddy-dashboard-rework .
+docker run -d --name baby-buddy-dashboard-rework \
+  -p 8099:8099 \
+  -e BABY_BUDDY_URL=http://your-baby-buddy:8000 \
+  -e BABY_BUDDY_API_KEY=your_api_key \
+  -v baby-buddy-dashboard-data:/data \
+  baby-buddy-dashboard-rework
 ```
-baby-buddy-dashboard/               # ← repository root
-├── repository.yaml                  # HA add-on repository metadata
-├── README.md
-├── LICENSE
-├── Dockerfile                       # Standalone Docker image (non-HA)
-├── docker-compose.yml               # Docker Compose with Baby Buddy + Dashboard
-├── .env.example                     # Environment variable template
-├── .gitignore
-├── run_local.sh                     # Local development script (sources .env)
-├── screenshots/                     # UI screenshots for README
-│
-└── baby-buddy-dashboard/            # ← the add-on
-    ├── config.yaml                  # Home Assistant add-on config
-    ├── Dockerfile
-    ├── build.yaml                   # Docker multi-arch build config
-    ├── run.sh                       # Production entry script (Home Assistant)
-    ├── translations/
-    │   └── en.yaml                  # HA config UI labels
-    ├── backend/
-    │   ├── server.py                # FastAPI app — API proxy + static file server
-    │   └── requirements.txt         # Python dependencies
-    └── frontend/
-        ├── index.html               # Entry HTML
-        ├── vite.config.js           # Vite config with API proxy for dev
-        ├── package.json
-        └── src/
-            ├── main.jsx             # React entry point
-            ├── App.jsx              # Main app shell — layout, tabs, modals, FAB
-            ├── styles.css           # Global styles, CSS variables, animations
-            ├── api.js               # API client for all Baby Buddy endpoints
-            ├── hooks/
-            │   ├── useBabyData.js   # Fetches and polls all baby data
-            │   └── useTimers.js     # Timer state management
-            ├── tabs/
-            │   ├── OverviewTab.jsx  # Daily stats, timelines, and charts
-            │   └── GrowthTab.jsx    # Weight, height, feeding & sleep trends
-            ├── components/
-            │   ├── Icons.jsx        # SVG icon components
-            │   ├── StatCard.jsx     # Stat display card
-            │   ├── SectionCard.jsx  # Section container with header
-            │   ├── TimelineItem.jsx # Timeline entry
-            │   ├── TimerButton.jsx  # Timer start/stop button
-            │   ├── DiaperBadge.jsx  # Diaper type badge
-            │   ├── CustomTooltip.jsx # Chart tooltip
-            │   ├── Modal.jsx        # Modal + form primitives
-            │   └── forms/
-            │       ├── FeedingForm.jsx
-            │       ├── SleepForm.jsx
-            │       ├── DiaperForm.jsx
-            │       ├── TemperatureForm.jsx
-            │       ├── TummyTimeForm.jsx
-            │       ├── WeightForm.jsx
-            │       ├── HeightForm.jsx
-            │       └── NoteForm.jsx
-            └── utils/
-                ├── colors.js        # Color palette
-                ├── units.js         # Unit system context (metric/imperial)
-                ├── mockData.js      # Demo mode mock data generator
-                └── formatters.js    # Date, time, and data formatting
+
+Release images may also be published as `ghcr.io/flifette/baby-buddy-rework:<version>`. The source-build commands above remain the canonical installation path and do not depend on package visibility.
+
+## Local development
+
+Requirements: Node.js 20 or newer, Python 3.10 or newer, and a reachable Baby Buddy instance.
+
+```bash
+cp .env.example .env
+./run_local.sh
 ```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+.\run_local.ps1
+```
+
+The frontend runs on `http://localhost:5173` and the backend on `http://localhost:8099`. Local dashboard data is written under the ignored `.local-data` directory.
 
 ## Configuration
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `baby_buddy_url` | Full URL to your Baby Buddy instance | — |
-| `baby_buddy_api_key` | Baby Buddy API token | — |
-| `refresh_interval` | Polling interval in seconds (5–300) | 30 |
-| `unit_system` | Unit labels: `metric` (kg, cm, mL, °C) or `imperial` (lb, in, oz, °F) | metric |
-| `demo_mode` | Show mock data without connecting to Baby Buddy | false |
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `BABY_BUDDY_URL` | Baby Buddy base URL | `http://babybuddy:8000` |
+| `BABY_BUDDY_API_KEY` | Baby Buddy API token | required outside demo mode |
+| `REFRESH_INTERVAL` | Polling interval in seconds | `30` |
+| `UNIT_SYSTEM` | `metric` or `imperial` labels | `metric` |
+| `DEMO_MODE` | Use demonstration data | `false` |
+| `TZ` | Container timezone | `Europe/Paris` |
+| `MILK_WASTE_FILE` | Standalone persistence file | `/data/milk-waste.json` |
 
-### Getting your API key
+Keep `.env`, API keys, runtime data, backups, and temporary scripts out of Git.
 
-1. Open your Baby Buddy instance
-2. Go to **Settings** (or `/user/settings/`)
-3. Find the **API Key** section
-4. Copy the token string
+## Build and test
 
-## Baby Buddy API Notes
+```bash
+cd baby-buddy-dashboard/frontend
+npm ci
+npm test
+npm run build
+```
 
-This dashboard uses Baby Buddy's REST API. A few important details about the filter parameters:
+GitHub Actions validates the frontend, Python backend, add-on metadata, standalone image, and all declared Home Assistant architectures. Version tags can publish a multi-architecture standalone image to GHCR.
 
-- Endpoints with `start`/`end` fields (feedings, sleep, tummy times) use `start_min`/`start_max` for date filtering
-- Endpoints with a `time` field (diaper changes, temperature) use `date_min`/`date_max`
-- All date filters expect **ISO 8601 datetime strings** (e.g., `2025-01-15T00:00:00`), not plain dates
-- Datetimes should be in **local time without a timezone suffix** so Baby Buddy interprets them in its configured timezone
+## License and attribution
 
-## License
-
-This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute it. See the LICENSE file for the full text.
+Licensed under the [MIT License](LICENSE). See [NOTICE](NOTICE) for upstream attribution and modification details.
