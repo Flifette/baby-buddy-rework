@@ -90,3 +90,14 @@ test("Home Assistant examples and their screenshots remain linked", async () => 
     assert.deepEqual([...image.subarray(-2)], [0xff, 0xd9]);
   }
 });
+
+test("the project acknowledgements remain visible in both readmes", async () => {
+  const readme = await read("README.md");
+  const readmeFr = await read("README.fr.md");
+
+  for (const document of [readme, readmeFr]) {
+    assert.match(document, /mbentancour\/baby-buddy-dashboard/);
+    assert.match(document, /herveaurel\/HomeAssistant/);
+    assert.match(document, /Codex/i);
+  }
+});

@@ -6,6 +6,14 @@ This project is derived from [mbentancour/baby-buddy-dashboard](https://github.c
 
 [Documentation française](README.fr.md)
 
+## About and acknowledgements
+
+I am not an experienced developer; I am still learning, and this project was created largely with Codex guidance and supervision. I am sharing it in the hope that it may help others, without claiming that I will be able to maintain it indefinitely.
+
+Thank you to [mbentancour/baby-buddy-dashboard](https://github.com/mbentancour/baby-buddy-dashboard) for providing such an excellent starting point and for all the work already invested in it, which gave me many ideas for this dashboard.
+
+Above all, I want to offer a hundred million thanks to [herveaurel/HomeAssistant](https://github.com/herveaurel/HomeAssistant). That remarkable “Mad-Geek” dashboard is what inspired me to begin my Home Assistant journey. For nearly two years, this work fascinated me, inspired me, and helped me understand an entire world I had never known. Without that generosity, I would probably never have made it this far.
+
 ## Features
 
 - Overview, Growth, Day, Routine, and Notes views
