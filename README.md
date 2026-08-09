@@ -35,6 +35,10 @@ Uneaten milk is stored by this dashboard in `/data/milk-waste.json`. It reduces 
   </tr>
 </table>
 
+## Home Assistant cards and helpers
+
+The add-on is not the only way to use Baby Buddy in Home Assistant. A separate [French Home Assistant examples guide](examples/home-assistant/README.md) shows how to build reusable Lovelace forms, input helpers, dynamically selected children, quick-action cards, and activity timers with the community Baby Buddy integration.
+
 ## Home Assistant add-on
 
 1. Open **Settings > Add-ons > Add-on Store**.
