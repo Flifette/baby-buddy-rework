@@ -27,6 +27,7 @@ import {
   aggregateByPeriod,
   getEntriesForDay,
   parseDuration,
+  applyMilkWasteToFeedings,
 } from "../utils/formatters";
 import { useUnits, formatVolume } from "../utils/units";
 
@@ -39,19 +40,21 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
   const [selectedBar, setSelectedBar] = useState(null);
   const toggle = (key) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const feedingTimeline = toFeedingTimeline(feedings, formatVolume);
+  const netFeedings = applyMilkWasteToFeedings(feedings, milkWaste);
+  const feedingTimeline = toFeedingTimeline(netFeedings, formatVolume);
   const diaperTimeline = toDiaperTimeline(changes);
   const sleepBlocks = toSleepBlocks(sleepEntries);
-  const weeklyFeedings = aggregateByPeriod(feedings, "feeding", period);
+  const weeklyFeedings = aggregateByPeriod(netFeedings, "feeding", period);
   const sleepByDay = aggregateByPeriod(sleepEntries, "sleep", period);
   const tummyByDay = aggregateByPeriod(tummyTimes, "tummy", period);
 
-  const totalFeeding = feedings.reduce((s, f) => s + (f.amount || 0), 0);
+  const totalMilkWaste = milkWaste.reduce((s, entry) => s + Number(entry.amount || 0), 0);
+  const totalFeeding = netFeedings.reduce((s, f) => s + Number(f.amount || 0), 0);
+  const hasFeedingVolume = feedings.some((f) => Number(f.amount || 0) > 0);
   const totalPumping = pumping.reduce((s, p) => s + Number(p.amount || 0), 0);
   const totalPumpingConsumed = feedings
     .filter((f) => f.type === "breast milk" && f.method === "bottle")
     .reduce((s, f) => s + Number(f.amount || 0), 0);
-  const totalMilkWaste = milkWaste.reduce((s, entry) => s + Number(entry.amount || 0), 0);
   const pumpingTimeline = pumping
     .slice()
     .sort((a, b) => new Date(b.end || b.start || 0) - new Date(a.end || a.start || 0))
@@ -115,7 +118,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
           <StatCard
             icon={<Icons.Bottle />}
             label="Repas"
-            value={totalFeeding > 0 ? formatVolume(totalFeeding) : `${feedings.length}`}
+            value={hasFeedingVolume ? formatVolume(totalFeeding) : `${feedings.length}`}
             sub={`${feedings.length} repas sur cette période`}
             color={colors.feeding}
           />
@@ -222,7 +225,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                     <TimelineItem
                       time={`${s.start}–${s.end}`}
                       label={`${s.duration.toFixed(1)} H${s.nap ? " · Sieste" : ""}`}
-                      detail={`${s.start} to ${s.end}`}
+                      detail={`${s.start} à ${s.end}`}
                       color={colors.sleep}
                       isLast={i === arr.length - 1}
                     />
@@ -362,7 +365,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                   <div style={{ width: 1, background: "var(--border)" }} />
                   <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.milkWaste }}>{formatVolume(totalMilkWaste)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Non bu</div></div>
                   <div style={{ width: 1, background: "var(--border)" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.growth }}>{formatVolume(totalPumping - totalPumpingConsumed - totalMilkWaste)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Stock</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.growth }}>{formatVolume(totalPumping - totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Stock</div></div>
                 </div>
               </div>
             ) : (
