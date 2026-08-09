@@ -85,7 +85,7 @@ export default function MilkStock({ pumping = [], feedings = [], milkWaste = [],
     const tire = periodPumping.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
     const consomme = periodConsumed.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
     const jete = periodWaste.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-    return { chart, tire, consomme, jete, stock: tire - consomme - jete, waste: periodWaste, dayDomain: [start.getTime(), end.getTime()] };
+    return { chart, tire, consomme, jete, stock: tire - consomme, waste: periodWaste, dayDomain: [start.getTime(), end.getTime()] };
   }, [feedings, milkWaste, period, pumping]);
 
   const handleBarClick = (data, key, name) => {

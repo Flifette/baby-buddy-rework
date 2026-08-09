@@ -72,7 +72,7 @@ const TILE_DEFAULTS = {
     feedingSummary: true, sleepSummary: true, diaperSummary: true, pumpingSummary: true,
     feedings: true, sleep: true, diapers: true, pumping: true, tummy: false,
   },
-  growth: { measurements: true, feedingSummary: true, sleepSummary: true, tummySummary: true, feedingChart: true, sleepChart: true, tummyChart: true, weightChart: true, heightChart: true, milkStock: true },
+  growth: { measurements: true, feedingSummary: true, sleepSummary: true, tummySummary: false, milkWasteSummary: false, feedingChart: true, sleepChart: true, tummyChart: false, weightChart: true, heightChart: true, milkStock: true },
 };
 
 function loadTileVisibility() {
@@ -349,7 +349,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
         <Modal title="Réglages des tuiles" onClose={() => setShowTileSettings(false)}>
           {[
             ["overview", "Aperçu", [["feedingSummary", "Résumé des repas"], ["sleepSummary", "Résumé du sommeil"], ["diaperSummary", "Résumé des changes"], ["pumpingSummary", "Résumé du tirage"], ["feedings", "Repas récents"], ["sleep", "Sommeil"], ["diapers", "Changes"], ["pumping", "Tirage de lait"], ["tummy", "Temps sur le ventre"]]],
-            ["growth", "Croissance", [["measurements", "Mesures récentes"], ["feedingSummary", "Résumé des repas"], ["sleepSummary", "Résumé du sommeil"], ["tummySummary", "Résumé du temps sur le ventre"], ["feedingChart", "Repas quotidiens"], ["sleepChart", "Sommeil quotidien"], ["tummyChart", "Temps sur le ventre quotidien"], ["weightChart", "Évolution du poids"], ["heightChart", "Évolution de la taille"], ["milkStock", "Stock de lait"]]],
+            ["growth", "Croissance", [["measurements", "Mesures récentes"], ["feedingSummary", "Résumé des repas"], ["milkWasteSummary", "Résumé du lait non bu"], ["sleepSummary", "Résumé du sommeil"], ["tummySummary", "Résumé du temps sur le ventre"], ["feedingChart", "Repas quotidiens"], ["sleepChart", "Sommeil quotidien"], ["tummyChart", "Temps sur le ventre quotidien"], ["weightChart", "Évolution du poids"], ["heightChart", "Évolution de la taille"], ["milkStock", "Stock de lait"]]],
           ].map(([view, title, items]) => (
             <section key={view} className="tile-settings-section">
               <h3>{title}</h3>

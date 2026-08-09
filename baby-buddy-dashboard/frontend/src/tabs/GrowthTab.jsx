@@ -18,7 +18,7 @@ import DayActivitiesModal from "../components/DayActivitiesModal";
 import { Icons } from "../components/Icons";
 import { colors } from "../utils/colors";
 import { useUnits } from "../utils/units";
-import { toGrowthSeries, formatGrowthTick, dailyFeedingTotals, dailySleepTotals, dailyTummyTotals, getEntriesForDate, parseDuration } from "../utils/formatters";
+import { toGrowthSeries, formatGrowthTick, dailyFeedingTotals, dailySleepTotals, dailyTummyTotals, getEntriesForDate, parseDuration, applyMilkWasteToFeedings } from "../utils/formatters";
 
 const hourLabel = (value) => new Date(value).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
@@ -37,14 +37,16 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
   const periodFeedings = (monthlyFeedings || []).filter((e) => inPeriod(e, "start"));
   const periodSleep = (monthlySleep || []).filter((e) => inPeriod(e, "start"));
   const periodTummy = (tummyTimes || []).filter((e) => inPeriod(e, "start"));
+  const periodMilkWaste = (milkWaste || []).filter((e) => inPeriod(e, "time"));
+  const netPeriodFeedings = applyMilkWasteToFeedings(periodFeedings, periodMilkWaste);
   const weightSeries = toGrowthSeries(periodWeights, "weight");
   const heightSeries = toGrowthSeries(periodHeights, "height");
   // "Total" renders only dates that actually contain data instead of 3,650
   // empty daily points, which keeps Recharts responsive on long histories.
   const chartDays = periodDays || null;
   const feedingSeries = period === "day"
-    ? periodFeedings.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: hourLabel(entry.start), timestamp: new Date(entry.start).getTime(), amount: Number(entry.amount || 0), entry }))
-    : dailyFeedingTotals(periodFeedings, chartDays);
+    ? netPeriodFeedings.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: hourLabel(entry.start), timestamp: new Date(entry.start).getTime(), amount: Number(entry.amount || 0), entry: entry._originalEntry || entry }))
+    : dailyFeedingTotals(netPeriodFeedings, chartDays);
   const sleepSeries = period === "day"
     ? periodSleep.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: hourLabel(entry.start), timestamp: new Date(entry.start).getTime(), hours: parseDuration(entry.duration), entry }))
     : dailySleepTotals(periodSleep, chartDays);
@@ -65,11 +67,18 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
   const avgSleep = sleepDays.length
     ? (sleepDays.reduce((s, d) => s + d.hours, 0) / sleepDays.length).toFixed(1)
     : 0;
-  const totalFeeding = feedingSeries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalFeeding = netPeriodFeedings.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const hasFeedingVolume = periodFeedings.some((item) => Number(item.amount || 0) > 0);
   const totalSleep = sleepSeries.reduce((sum, item) => sum + Number(item.hours || 0), 0).toFixed(1);
   const tummyDays = tummySeries.filter((item) => item.minutes > 0);
   const avgTummy = tummyDays.length ? Math.round(tummyDays.reduce((sum, item) => sum + item.minutes, 0) / tummyDays.length) : 0;
   const totalTummy = tummySeries.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+  const wasteSeries = dailyFeedingTotals(periodMilkWaste, chartDays);
+  const wasteDays = wasteSeries.filter((item) => item.amount > 0);
+  const totalMilkWaste = periodMilkWaste.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const avgMilkWaste = wasteDays.length
+    ? Math.round(wasteDays.reduce((sum, item) => sum + Number(item.amount || 0), 0) / wasteDays.length)
+    : 0;
 
   const handleChartClick = (data, type) => {
     if (!data || !data.activePayload?.[0]) return;
@@ -102,7 +111,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
           gap: 14,
           marginBottom: 20,
         }}
@@ -214,7 +223,24 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
               </span>
             </div>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              {(period === "day" ? totalFeeding : avgFeeding) ? `${period === "day" ? totalFeeding : avgFeeding} ${units.volume}` : "—"}
+              {hasFeedingVolume ? `${period === "day" ? totalFeeding : avgFeeding} ${units.volume}` : "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+              {period === "day" ? "sur la journée" : "par jour sur la période"}
+            </div>
+          </div>
+        </div>) : null}
+
+        {visibleTiles.milkWasteSummary !== false ? (<div className="fade-in fade-in-4">
+          <div style={{ background: "var(--card-bg)", borderRadius: 16, padding: "20px 22px", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `${colors.milkWaste}18`, color: colors.milkWaste, display: "flex", alignItems: "center", justifyContent: "center" }}><Icons.BottleOff /></div>
+              <span style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                {period === "day" ? "Non bu" : "Non bu moyen"}
+              </span>
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
+              {(period === "day" ? totalMilkWaste : avgMilkWaste) > 0 ? `${period === "day" ? totalMilkWaste : avgMilkWaste} ${units.volume}` : "—"}
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
               {period === "day" ? "sur la journée" : "par jour sur la période"}
@@ -274,7 +300,9 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
               {period === "day" ? "sur la journée" : "par jour sur la période"}
             </div>
           </div>
-        </div>) : null}</>
+        </div>) : null}
+
+        </>
       </div>
 
       {/* Charts */}
