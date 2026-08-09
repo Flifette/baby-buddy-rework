@@ -1,0 +1,16 @@
+configuration:
+  baby_buddy_url:
+    name: URL de Baby Buddy
+    description: "URL complète de votre instance Baby Buddy (par exemple https://babybuddy.exemple.fr)"
+  baby_buddy_api_key:
+    name: Clé API
+    description: "Jeton API disponible dans les réglages de Baby Buddy"
+  refresh_interval:
+    name: Intervalle d’actualisation
+    description: "Fréquence d’actualisation du dashboard, en secondes"
+  demo_mode:
+    name: Mode démonstration
+    description: "Afficher des données de démonstration sans connexion à Baby Buddy"
+  unit_system:
+    name: Système d’unités
+    description: "Libellés métriques (kg, cm, mL, °C) ou impériaux (lb, in, oz, °F)"

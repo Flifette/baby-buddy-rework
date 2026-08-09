@@ -12,13 +12,17 @@ services:
     restart: unless-stopped
 
   dashboard:
-    image: mbentancour/baby-buddy-dashboard:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: baby-buddy-dashboard-rework:local
     environment:
       - BABY_BUDDY_URL=${BABY_BUDDY_URL:-http://babybuddy:8000}
       - BABY_BUDDY_API_KEY=${BABY_BUDDY_API_KEY}
       - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30}
       - UNIT_SYSTEM=${UNIT_SYSTEM:-metric}
       - DEMO_MODE=${DEMO_MODE:-false}
+      - TZ=${TZ:-Europe/Paris}
     ports:
       - "8099:8099"
     volumes:

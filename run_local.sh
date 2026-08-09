@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 ADDON_DIR="$REPO_DIR/baby-buddy-dashboard"
@@ -16,10 +16,13 @@ else
   exit 1
 fi
 
+export MILK_WASTE_FILE="${MILK_WASTE_FILE:-$REPO_DIR/.local-data/milk-waste.json}"
+mkdir -p "$(dirname "$MILK_WASTE_FILE")"
+
 # --- Install dependencies if needed ---
 if [ ! -d "$ADDON_DIR/frontend/node_modules" ]; then
   echo "Installing frontend dependencies..."
-  npm --prefix "$ADDON_DIR/frontend" install
+  npm --prefix "$ADDON_DIR/frontend" ci
 fi
 
 if ! python3 -c "import fastapi" 2>/dev/null; then

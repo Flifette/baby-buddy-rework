@@ -1,0 +1,11 @@
+Baby Buddy Dashboard Rework
+
+This project is derived from Baby Buddy Dashboard:
+https://github.com/mbentancour/baby-buddy-dashboard
+
+The upstream project and this derivative are licensed under the MIT License.
+The original copyright and license notice are preserved in LICENSE.
+
+The derivative adds a substantially reworked French-first interface, additional
+views and settings, milk pumping and stock tracking, dashboard-only uneaten-milk
+records, and related data calculations and visualizations.
