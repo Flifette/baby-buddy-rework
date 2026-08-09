@@ -16,6 +16,23 @@ Ce projet est dérivé de [mbentancour/baby-buddy-dashboard](https://github.com/
 
 Le lait non bu est propre au dashboard et persiste dans `/data/milk-waste.json`. Il réduit la quantité réellement bue, sans créer de second repas Baby Buddy et sans provoquer une seconde déduction du stock.
 
+## Captures d’écran
+
+<table>
+  <tr>
+    <td align="center"><strong>Aperçu</strong><br><img src="screenshots/overview-current.jpg" alt="Vue Aperçu du dashboard" width="440"></td>
+    <td align="center"><strong>Croissance et stock de lait</strong><br><img src="screenshots/growth-current.jpg" alt="Graphiques de croissance et stock de lait" width="440"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Chronologie de la journée</strong><br><img src="screenshots/day-timeline.jpg" alt="Chronologie des activités de la journée" width="440"></td>
+    <td align="center"><strong>Routine</strong><br><img src="screenshots/routine-overview.jpg" alt="Visualisation des routines" width="440"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Notes</strong><br><img src="screenshots/notes-view.jpg" alt="Vue des notes" width="440"></td>
+    <td align="center"><strong>Tuiles personnalisables</strong><br><img src="screenshots/tile-settings.jpg" alt="Réglages des tuiles" width="440"></td>
+  </tr>
+</table>
+
 ## Installation Home Assistant
 
 1. Ouvrir **Paramètres > Modules complémentaires > Boutique des modules complémentaires**.

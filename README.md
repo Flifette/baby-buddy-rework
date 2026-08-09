@@ -18,6 +18,23 @@ This project is derived from [mbentancour/baby-buddy-dashboard](https://github.c
 
 Uneaten milk is stored by this dashboard in `/data/milk-waste.json`. It reduces the amount actually consumed but is never sent to Baby Buddy as another feeding and is never deducted from stock a second time.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><strong>Overview</strong><br><img src="screenshots/overview-current.jpg" alt="Overview dashboard" width="440"></td>
+    <td align="center"><strong>Growth and milk stock</strong><br><img src="screenshots/growth-current.jpg" alt="Growth charts and milk stock" width="440"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Day timeline</strong><br><img src="screenshots/day-timeline.jpg" alt="Daily activity timeline" width="440"></td>
+    <td align="center"><strong>Routine</strong><br><img src="screenshots/routine-overview.jpg" alt="Routine visualization" width="440"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Notes</strong><br><img src="screenshots/notes-view.jpg" alt="Notes view" width="440"></td>
+    <td align="center"><strong>Personalized tiles</strong><br><img src="screenshots/tile-settings.jpg" alt="Tile settings" width="440"></td>
+  </tr>
+</table>
+
 ## Home Assistant add-on
 
 1. Open **Settings > Add-ons > Add-on Store**.

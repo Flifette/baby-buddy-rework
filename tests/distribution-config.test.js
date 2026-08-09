@@ -46,3 +46,22 @@ test("documentation and example configuration point to this distribution", async
   assert.match(environment, /BABY_BUDDY_URL=http:\/\/babybuddy:8000/);
   assert.doesNotMatch(environment, /BABY_BUDDY_URL=http:\/\/localhost:8000/);
 });
+
+test("the documented screenshot gallery contains valid JPEG files", async () => {
+  const readme = await read("README.md");
+  const screenshots = [
+    "overview-current.jpg",
+    "growth-current.jpg",
+    "day-timeline.jpg",
+    "routine-overview.jpg",
+    "notes-view.jpg",
+    "tile-settings.jpg",
+  ];
+
+  for (const filename of screenshots) {
+    assert.match(readme, new RegExp(`screenshots/${filename}`));
+    const image = await readFile(path.join(root, "screenshots", filename));
+    assert.deepEqual([...image.subarray(0, 2)], [0xff, 0xd8]);
+    assert.deepEqual([...image.subarray(-2)], [0xff, 0xd9]);
+  }
+});
