@@ -18,7 +18,7 @@ import DayActivitiesModal from "../components/DayActivitiesModal";
 import { Icons } from "../components/Icons";
 import { colors } from "../utils/colors";
 import { useUnits } from "../utils/units";
-import { toGrowthSeries, formatGrowthTick, dailyFeedingTotals, dailySleepTotals, dailyTummyTotals, getEntriesForDate, parseDuration, applyMilkWasteToFeedings } from "../utils/formatters";
+import { toGrowthSeries, formatGrowthTick, dailyFeedingTotals, dailySleepTotals, dailyTummyTotals, getEntriesForDateKey, parseDuration, applyMilkWasteToFeedings } from "../utils/formatters";
 
 const hourLabel = (value) => new Date(value).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
@@ -87,19 +87,20 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
     const label = period === "day" && (type === "feeding" || type === "sleep" || type === "tummy") ? hourLabel(rawLabel) : rawLabel;
     const value = payload.value;
     const entry = payload.payload?.entry;
-    setSelectedBar({ type, label, value, entry });
+    const dateKey = payload.payload?.dateKey;
+    setSelectedBar({ type, label, value, entry, dateKey });
   };
 
-  const openDayModal = (dateLabel, type) => {
+  const openDayModal = (dateLabel, dateKey, type) => {
     let dayData = [];
     if (type === "feeding") {
-      dayData = getEntriesForDate(periodFeedings, dateLabel, "start");
+      dayData = getEntriesForDateKey(periodFeedings, dateKey, "start");
     } else if (type === "sleep") {
-      dayData = getEntriesForDate(periodSleep, dateLabel, "start");
+      dayData = getEntriesForDateKey(periodSleep, dateKey, "start");
     } else if (type === "pumping") {
-      dayData = getEntriesForDate(pumping, dateLabel, "start");
+      dayData = getEntriesForDateKey(pumping, dateKey, "start");
     } else if (type === "tummy") {
-      dayData = getEntriesForDate(periodTummy, dateLabel, "start");
+      dayData = getEntriesForDateKey(periodTummy, dateKey, "start");
     }
     setSelectedBar(null);
     setDayModal({ day: dateLabel, type, data: dayData });
@@ -346,7 +347,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     color={colors.feeding}
                     onViewEntries={() => {
                       if (period === "day" && selectedBar.entry) onEditEntry?.("feeding", selectedBar.entry);
-                      else openDayModal(selectedBar.label, "feeding");
+                      else openDayModal(selectedBar.label, selectedBar.dateKey, "feeding");
                     }}
                     onDismiss={() => setSelectedBar(null)}
                   />
@@ -393,7 +394,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     color={colors.sleep}
                     onViewEntries={() => {
                       if (period === "day" && selectedBar.entry) onEditEntry?.("sleep", selectedBar.entry);
-                      else openDayModal(selectedBar.label, "sleep");
+                      else openDayModal(selectedBar.label, selectedBar.dateKey, "sleep");
                     }}
                     onDismiss={() => setSelectedBar(null)}
                   />
@@ -431,7 +432,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     color={colors.tummy}
                     onViewEntries={() => {
                       if (period === "day" && selectedBar.entry) onEditEntry?.("tummy", selectedBar.entry);
-                      else openDayModal(selectedBar.label, "tummy");
+                      else openDayModal(selectedBar.label, selectedBar.dateKey, "tummy");
                     }}
                     onDismiss={() => setSelectedBar(null)}
                   />
