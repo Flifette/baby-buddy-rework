@@ -1,6 +1,10 @@
 import os
 import json
 import asyncio
+import base64
+import binascii
+import hmac
+import html
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -8,8 +12,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 import httpx
+from starlette.background import BackgroundTask
 
 # --- Configuration ---
 
@@ -26,6 +31,14 @@ BABY_BUDDY_API_KEY = os.environ.get("BABY_BUDDY_API_KEY", "")
 REFRESH_INTERVAL = int(os.environ.get("REFRESH_INTERVAL", "30"))
 DEMO_MODE = os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes")
 UNIT_SYSTEM = os.environ.get("UNIT_SYSTEM", "metric").lower()
+HA_ADDON_MODE = os.environ.get("HA_ADDON_MODE", "").lower() in ("true", "1", "yes")
+DASHBOARD_USERNAME = os.environ.get("DASHBOARD_USERNAME", "")
+DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
+MAX_REQUEST_BODY_BYTES = int(os.environ.get("MAX_REQUEST_BODY_BYTES", str(1024 * 1024)))
+MAX_MILK_WASTE_ENTRIES = int(os.environ.get("MAX_MILK_WASTE_ENTRIES", "10000"))
+MAX_MILK_WASTE_FILE_BYTES = int(
+    os.environ.get("MAX_MILK_WASTE_FILE_BYTES", str(10 * 1024 * 1024))
+)
 
 # Fallback: read from HA add-on options.json
 if not BABY_BUDDY_URL:
@@ -50,6 +63,13 @@ http_client: httpx.AsyncClient | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global http_client
+    if not HA_ADDON_MODE and (
+        not DASHBOARD_USERNAME or len(DASHBOARD_PASSWORD) < 16
+    ):
+        raise RuntimeError(
+            "Standalone mode requires DASHBOARD_USERNAME and a "
+            "DASHBOARD_PASSWORD of at least 16 characters"
+        )
     http_client = httpx.AsyncClient(
         base_url=BABY_BUDDY_URL,
         headers={
@@ -69,10 +89,73 @@ app = FastAPI(lifespan=lifespan)
 # --- API routes ---
 
 
+def valid_basic_auth(header: str, username: str, password: str) -> bool:
+    if not header.startswith("Basic "):
+        return False
+    try:
+        decoded = base64.b64decode(header[6:], validate=True).decode("utf-8")
+        supplied_username, supplied_password = decoded.split(":", 1)
+    except (binascii.Error, UnicodeDecodeError, ValueError):
+        return False
+    return hmac.compare_digest(supplied_username, username) and hmac.compare_digest(
+        supplied_password, password
+    )
+
+
+@app.middleware("http")
+async def require_standalone_authentication(request: Request, call_next):
+    if HA_ADDON_MODE or request.url.path == "/healthz":
+        return await call_next(request)
+    if not valid_basic_auth(
+        request.headers.get("authorization", ""),
+        DASHBOARD_USERNAME,
+        DASHBOARD_PASSWORD,
+    ):
+        return Response(
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Baby Buddy Dashboard"'},
+        )
+    return await call_next(request)
+
+
+@app.get("/healthz")
+async def healthcheck():
+    return {"status": "ok"}
+
+
+async def read_limited_body(request: Request) -> bytes:
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_REQUEST_BODY_BYTES:
+                raise HTTPException(413, "Request body too large")
+        except ValueError as exc:
+            raise HTTPException(400, "Invalid Content-Length header") from exc
+
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_REQUEST_BODY_BYTES:
+            raise HTTPException(413, "Request body too large")
+    return bytes(body)
+
+
+async def read_json_object(request: Request) -> dict:
+    try:
+        payload = json.loads((await read_limited_body(request)).decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(400, "Invalid JSON body") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(422, "JSON body must be an object")
+    return payload
+
+
 def read_milk_waste_entries() -> list[dict]:
     if not MILK_WASTE_FILE.exists():
         return []
     try:
+        if MILK_WASTE_FILE.stat().st_size > MAX_MILK_WASTE_FILE_BYTES:
+            raise HTTPException(507, "Milk waste storage limit exceeded")
         data = json.loads(MILK_WASTE_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise HTTPException(500, "Unable to read milk waste data") from exc
@@ -83,12 +166,12 @@ def read_milk_waste_entries() -> list[dict]:
 
 def write_milk_waste_entries(entries: list[dict]) -> None:
     try:
+        serialized = json.dumps(entries, ensure_ascii=False, indent=2) + "\n"
+        if len(serialized.encode("utf-8")) > MAX_MILK_WASTE_FILE_BYTES:
+            raise HTTPException(507, "Milk waste storage limit exceeded")
         MILK_WASTE_FILE.parent.mkdir(parents=True, exist_ok=True)
         temp_path = MILK_WASTE_FILE.with_suffix(".tmp")
-        temp_path.write_text(
-            json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        temp_path.write_text(serialized, encoding="utf-8")
         temp_path.replace(MILK_WASTE_FILE)
     except OSError as exc:
         raise HTTPException(500, "Unable to save milk waste data") from exc
@@ -127,9 +210,11 @@ async def get_milk_waste(child: int | None = None, start_min: str | None = None,
 
 @app.post("/api/milk-waste", status_code=201)
 async def create_milk_waste(request: Request):
-    entry = validate_milk_waste(await request.json())
+    entry = validate_milk_waste(await read_json_object(request))
     async with milk_waste_lock:
         entries = read_milk_waste_entries()
+        if len(entries) >= MAX_MILK_WASTE_ENTRIES:
+            raise HTTPException(507, "Milk waste occurrence limit exceeded")
         entries.append(entry)
         write_milk_waste_entries(entries)
     return entry
@@ -137,12 +222,13 @@ async def create_milk_waste(request: Request):
 
 @app.patch("/api/milk-waste/{entry_id}")
 async def update_milk_waste(entry_id: str, request: Request):
+    payload = await read_json_object(request)
     async with milk_waste_lock:
         entries = read_milk_waste_entries()
         index = next((i for i, entry in enumerate(entries) if entry.get("id") == entry_id), None)
         if index is None:
             raise HTTPException(404, "Milk waste occurrence not found")
-        entries[index] = validate_milk_waste(await request.json(), entry_id)
+        entries[index] = validate_milk_waste(payload, entry_id)
         write_milk_waste_entries(entries)
         return entries[index]
 
@@ -175,20 +261,17 @@ async def proxy_baby_buddy(path: str, request: Request):
     body = None
     content_type = request.headers.get("content-type", "")
     if request.method in ("POST", "PATCH", "PUT"):
-        body = await request.body()
+        body = await read_limited_body(request)
 
     try:
         headers = {}
         if body and "application/json" in content_type:
             headers["Content-Type"] = "application/json"
 
-        response = await http_client.request(
-            method=request.method,
-            url=target_url,
-            params=params,
-            content=body,
-            headers=headers,
+        upstream_request = http_client.build_request(
+            request.method, target_url, params=params, content=body, headers=headers
         )
+        response = await http_client.send(upstream_request, stream=True)
     except httpx.ConnectError:
         raise HTTPException(502, "Cannot connect to Baby Buddy")
     except httpx.TimeoutException:
@@ -201,10 +284,11 @@ async def proxy_baby_buddy(path: str, request: Request):
         if k.lower() not in excluded_headers
     }
 
-    return Response(
-        content=response.content,
+    return StreamingResponse(
+        response.aiter_bytes(),
         status_code=response.status_code,
         headers=response_headers,
+        background=BackgroundTask(response.aclose),
     )
 
 
@@ -212,25 +296,35 @@ async def proxy_baby_buddy(path: str, request: Request):
 async def proxy_media(path: str):
     """Proxy media files (e.g. child photos) from Baby Buddy."""
     try:
-        response = await http_client.get(
-            f"/{path}",
-            headers={"Accept": "*/*"},
+        upstream_request = http_client.build_request(
+            "GET", f"/{path}", headers={"Accept": "*/*"}
         )
+        response = await http_client.send(upstream_request, stream=True)
     except httpx.ConnectError:
         raise HTTPException(502, "Cannot connect to Baby Buddy")
     except httpx.TimeoutException:
         raise HTTPException(504, "Baby Buddy request timed out")
 
     if response.status_code != 200:
+        await response.aclose()
         raise HTTPException(response.status_code, "Media not found")
 
-    return Response(
-        content=response.content,
+    return StreamingResponse(
+        response.aiter_bytes(),
         headers={"Content-Type": response.headers.get("content-type", "application/octet-stream")},
+        background=BackgroundTask(response.aclose),
     )
 
 
 # --- Static files (React SPA) ---
+
+
+def resolve_static_file(path: str, static_dir: Path = STATIC_DIR) -> Path | None:
+    root = static_dir.resolve()
+    candidate = (root / path).resolve()
+    if not candidate.is_relative_to(root) or not candidate.is_file():
+        return None
+    return candidate
 
 if STATIC_DIR.exists():
     assets_dir = STATIC_DIR / "assets"
@@ -241,15 +335,15 @@ if STATIC_DIR.exists():
 
     @app.get("/{path:path}")
     async def serve_spa(path: str, request: Request):
-        file_path = STATIC_DIR / path
-        if file_path.is_file() and ".." not in path:
+        file_path = resolve_static_file(path)
+        if file_path is not None:
             return FileResponse(file_path)
 
         # Inject <base> tag with ingress path so relative URLs resolve correctly
         ingress_path = request.headers.get("X-Ingress-Path", "")
-        index_html = (STATIC_DIR / "index.html").read_text()
+        index_html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
         if ingress_path:
-            base_href = ingress_path.rstrip("/") + "/"
+            base_href = html.escape(ingress_path.rstrip("/") + "/", quote=True)
             index_html = index_html.replace("<head>", f'<head><base href="{base_href}">', 1)
 
         return Response(

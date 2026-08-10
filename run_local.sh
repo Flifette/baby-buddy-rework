@@ -27,14 +27,14 @@ fi
 
 if ! python3 -c "import fastapi" 2>/dev/null; then
   echo "Installing backend dependencies..."
-  pip3 install -r "$ADDON_DIR/backend/requirements.txt"
+  pip3 install --require-hashes -r "$ADDON_DIR/backend/requirements.lock"
 fi
 
 # --- Start backend (FastAPI on port 8099) ---
 echo "Starting backend at http://localhost:8099 ..."
 echo "Connecting to Baby Buddy at: $BABY_BUDDY_URL"
 python3 -m uvicorn backend.server:app \
-  --host 0.0.0.0 \
+  --host 127.0.0.1 \
   --port 8099 \
   --log-level info \
   --app-dir "$ADDON_DIR" &
