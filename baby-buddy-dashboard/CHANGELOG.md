@@ -8,6 +8,8 @@
 - Mise à niveau des dépendances Python et JavaScript concernées par des avis de sécurité.
 - Restriction des serveurs de développement locaux à l'interface de boucle locale.
 - Épinglage des actions de publication sur des commits immuables.
+- Construction du frontend sur l'architecture native avant l'assemblage de
+  l'image aarch64, afin d'éviter l'exécution instable de Node sous QEMU.
 - Migration des images de base Home Assistant vers le Dockerfile, conformément au format Supervisor actuel.
 
 # 1.4.19
