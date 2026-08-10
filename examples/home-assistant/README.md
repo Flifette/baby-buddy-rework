@@ -208,6 +208,21 @@ rest:
 
 Le capteur créé est `sensor.baby_buddy_api_children`.
 
+### Exclusion recommandée du Recorder
+
+Ce capteur est actualisé régulièrement et transporte la liste complète des enfants dans ses attributs. Son historique n’est pas utile au fonctionnement des formulaires : il est donc recommandé de ne pas l’enregistrer dans la base de données Home Assistant.
+
+À ajouter dans `configuration.yaml` :
+
+```yaml
+recorder:
+  exclude:
+    entity_globs:
+      - sensor.baby_buddy_api_*
+```
+
+Si une section `recorder:` existe déjà, ne la dupliquez pas : ajoutez seulement le motif sous sa section `exclude.entity_globs`. Cette exclusion empêche les futurs enregistrements dans l’historique, mais le capteur reste disponible pour les automatisations et les templates. Elle ne supprime pas les anciennes données déjà présentes dans la base.
+
 ## 5. Synchronisation automatique du sélecteur
 
 ```yaml
