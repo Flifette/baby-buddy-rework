@@ -13,7 +13,7 @@ Les noms d’actions et leurs champs ont été contrôlés avec l’intégration
 <table>
   <tr>
     <td align="center"><strong>Menu d’actions</strong><br><img src="screenshots/action-menu.jpg" alt="Menu des actions Baby Buddy" width="500"></td>
-    <td align="center"><strong>Actions rapides</strong><br><img src="screenshots/quick-actions.jpg" alt="Actions rapides Baby Buddy" width="500"></td>
+    <td align="center"><strong>Minuteurs</strong><br><img src="screenshots/quick-actions.jpg" alt="Minuteurs Baby Buddy" width="500"></td>
   </tr>
   <tr>
     <td align="center"><strong>Formulaire de repas</strong><br><img src="screenshots/feeding-form.jpg" alt="Formulaire Home Assistant pour ajouter un repas" width="500"></td>

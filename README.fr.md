@@ -4,6 +4,8 @@ Dashboard indépendant en français pour [Baby Buddy](https://github.com/babybud
 
 Ce projet est dérivé de [mbentancour/baby-buddy-dashboard](https://github.com/mbentancour/baby-buddy-dashboard) sous licence MIT. L’architecture d’origine est conservée, tandis que l’interface et la gestion des données ont été largement retravaillées.
 
+[English documentation](README.md)
+
 ## À propos et remerciements
 
 Je ne suis pas un développeur confirmé : je débute, et ce projet a été réalisé en grande partie avec l’accompagnement et sous la supervision de Codex. Je le partage sans prétendre pouvoir en assurer la maintenance indéfiniment, mais avec l’envie que ce travail puisse être utile à d’autres.
@@ -103,6 +105,31 @@ Copy-Item .env.example .env
 ```
 
 Sous Bash, utiliser `./run_local.sh`. Le frontend écoute sur `http://localhost:5173`, le backend sur `http://localhost:8099`, et les données locales du dashboard sont écrites dans le dossier ignoré `.local-data`.
+
+## Configuration
+
+| Variable | Utilisation | Valeur par défaut |
+| --- | --- | --- |
+| `BABY_BUDDY_URL` | URL de base de Baby Buddy | `http://babybuddy:8000` |
+| `BABY_BUDDY_API_KEY` | Jeton API Baby Buddy | obligatoire hors mode démonstration |
+| `REFRESH_INTERVAL` | Intervalle d’actualisation en secondes | `30` |
+| `UNIT_SYSTEM` | Libellés `metric` ou `imperial` | `metric` |
+| `DEMO_MODE` | Utiliser les données de démonstration | `false` |
+| `TZ` | Fuseau horaire du conteneur | `Europe/Paris` |
+| `MILK_WASTE_FILE` | Fichier de persistance en installation autonome | `/data/milk-waste.json` |
+
+Conserver `.env`, les clés API, les données runtime, les sauvegardes et les scripts temporaires hors de Git.
+
+## Construction et tests
+
+```bash
+cd baby-buddy-dashboard/frontend
+npm ci
+npm test
+npm run build
+```
+
+GitHub Actions valide le frontend, le backend Python, les métadonnées de l’add-on, l’image autonome et toutes les architectures Home Assistant déclarées. Les tags de version peuvent publier une image autonome multiarchitecture dans GHCR.
 
 ## Sécurité et données
 
