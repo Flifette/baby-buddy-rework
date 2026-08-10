@@ -56,17 +56,80 @@ jobs:
           path: baby-buddy-dashboard
 
   standalone-image:
-    name: Standalone image
+    name: Standalone image (${{ matrix.name }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: amd64
+            platform: linux/amd64
+          - name: arm64
+            platform: linux/arm64
+          - name: armv7
+            platform: linux/arm/v7
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
       - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Dockerfile
           load: true
-          tags: baby-buddy-dashboard-rework:ci
+          platforms: ${{ matrix.platform }}
+          tags: baby-buddy-dashboard-rework:ci-${{ matrix.name }}
+      - name: Start and probe the standalone container
+        shell: bash
+        run: |
+          set -euo pipefail
+          container="baby-buddy-dashboard-${{ matrix.name }}"
+          trap 'docker logs "$container" || true; docker rm -f "$container" || true' EXIT
+          docker run -d --name "$container" -p 8099:8099 \
+            -e DEMO_MODE=true \
+            -e DASHBOARD_USERNAME=ci \
+            -e DASHBOARD_PASSWORD=ci-platform-password-123 \
+            "baby-buddy-dashboard-rework:ci-${{ matrix.name }}"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8099/healthz >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              exit 1
+            fi
+            sleep 2
+          done
+          curl --fail --silent --user ci:ci-platform-password-123 \
+            http://127.0.0.1:8099/api/config >/dev/null
+
+  compose-clean-install:
+    name: Docker Compose clean install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build, start, and probe from an empty Docker state
+        shell: bash
+        env:
+          BABY_BUDDY_API_KEY: unused-in-demo-mode
+          BABY_BUDDY_URL: http://babybuddy.invalid:8000
+          DASHBOARD_USERNAME: ci
+          DASHBOARD_PASSWORD: ci-compose-password-123
+          DEMO_MODE: "true"
+        run: |
+          set -euo pipefail
+          trap 'docker compose logs dashboard || true; docker compose down --volumes --remove-orphans || true' EXIT
+          docker compose up -d --build dashboard
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8099/healthz >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              exit 1
+            fi
+            sleep 2
+          done
+          curl --fail --silent --user ci:ci-compose-password-123 \
+            http://127.0.0.1:8099/api/config >/dev/null
 
   addon-images:
     name: Add-on image (${{ matrix.arch }})
