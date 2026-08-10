@@ -81,6 +81,7 @@ test("Home Assistant examples and their screenshots remain linked", async () => 
   assert.match(readmeFr, /examples\/home-assistant\/README\.md/);
   assert.match(guide, /babybuddy\.add_feeding/);
   assert.match(guide, /integration_entities\('babybuddy'\)/);
+  assert.match(guide, /entity_globs:[\s\S]*sensor\.baby_buddy_api_\*/);
   assert.doesNotMatch(guide, /REMPLACER_PAR_LE_JETON_API[^\n]*[A-Za-z0-9]{20,}/);
 
   for (const filename of screenshots) {
