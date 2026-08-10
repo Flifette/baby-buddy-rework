@@ -1,5 +1,15 @@
 # Changelog
 
+# 1.4.20
+
+- Blocage de la lecture de fichiers hors du frontend compilé.
+- Ajout d'une authentification HTTP Basic obligatoire pour les installations autonomes ; l'add-on conserve l'authentification par ingress Home Assistant.
+- Limitation de la taille des requêtes et du stockage persistant du lait non bu, avec diffusion progressive des réponses Baby Buddy.
+- Mise à niveau des dépendances Python et JavaScript concernées par des avis de sécurité.
+- Restriction des serveurs de développement locaux à l'interface de boucle locale.
+- Épinglage des actions de publication sur des commits immuables.
+- Migration des images de base Home Assistant vers le Dockerfile, conformément au format Supervisor actuel.
+
 # 1.4.19
 
 - Préparation de la distribution publique du fork sans modification du comportement du dashboard.

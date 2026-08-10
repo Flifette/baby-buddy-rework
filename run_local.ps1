@@ -29,7 +29,7 @@ if (-not (Test-Path -LiteralPath $venvDir)) {
 }
 
 $python = Join-Path $venvDir "Scripts\python.exe"
-& $python -m pip install --disable-pip-version-check -r (Join-Path $addonDir "backend\requirements.txt")
+& $python -m pip install --disable-pip-version-check --require-hashes -r (Join-Path $addonDir "backend\requirements.lock")
 
 $frontendDir = Join-Path $addonDir "frontend"
 if (-not (Test-Path -LiteralPath (Join-Path $frontendDir "node_modules"))) {
@@ -41,7 +41,7 @@ $frontend = $null
 try {
     $backend = Start-Process -FilePath $python -ArgumentList @(
         "-m", "uvicorn", "backend.server:app",
-        "--host", "0.0.0.0",
+        "--host", "127.0.0.1",
         "--port", "8099",
         "--log-level", "info",
         "--app-dir", $addonDir

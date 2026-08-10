@@ -10,23 +10,26 @@ const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 test("repository metadata identifies the rework repository", async () => {
   const repository = await read("repository.yaml");
   const addon = await read("baby-buddy-dashboard/config.yaml");
-  const build = await read("baby-buddy-dashboard/build.yaml");
+  const dockerfile = await read("baby-buddy-dashboard/Dockerfile");
 
   assert.match(repository, /github\.com\/Flifette\/baby-buddy-rework/);
   assert.match(repository, /maintainer:\s*Flifette/);
   assert.match(addon, /slug:\s*"baby-buddy-dashboard"/);
   assert.match(addon, /github\.com\/Flifette\/baby-buddy-rework/);
-  assert.match(build, /amd64-base-python/);
-  assert.match(build, /aarch64-base-python/);
-  assert.doesNotMatch(build, /(armv7|armhf|i386)-base-python/);
+  assert.match(dockerfile, /amd64-base-python/);
+  assert.match(dockerfile, /aarch64-base-python/);
+  assert.doesNotMatch(dockerfile, /(armv7|armhf|i386)-base-python/);
 });
 
 test("Compose builds this repository and persists dashboard data", async () => {
   const compose = await read("docker-compose.yml");
 
   assert.doesNotMatch(compose, /mbentancour\/baby-buddy-dashboard:latest/);
+  assert.doesNotMatch(compose, /image:\s*[^\n]+:latest/);
   assert.match(compose, /dashboard:[\s\S]*build:/);
   assert.match(compose, /dashboard_data:\/data/);
+  assert.match(compose, /DASHBOARD_USERNAME/);
+  assert.match(compose, /DASHBOARD_PASSWORD/);
 });
 
 test("standalone image keeps milk waste persistent and runs unprivileged", async () => {
@@ -36,6 +39,20 @@ test("standalone image keeps milk waste persistent and runs unprivileged", async
   assert.match(dockerfile, /VOLUME \["\/data"\]/);
   assert.match(dockerfile, /USER dashboard/);
   assert.match(dockerfile, /HEALTHCHECK/);
+  assert.match(dockerfile, /python:3\.12\.13-alpine3\.22@sha256:/);
+});
+
+test("security-sensitive build inputs are immutable", async () => {
+  const build = await read("baby-buddy-dashboard/Dockerfile");
+  const workflows = [
+    await read(".github/workflows/ci.yml"),
+    await read(".github/workflows/publish-image.yml"),
+  ].join("\n");
+
+  assert.match(build, /amd64-base-python:[^\n]+@sha256:/);
+  assert.match(build, /aarch64-base-python:[^\n]+@sha256:/);
+  assert.doesNotMatch(workflows, /uses:\s*[^\s#]+@v\d/);
+  assert.match(workflows, /uses:\s*actions\/checkout@[0-9a-f]{40}/);
 });
 
 test("documentation and example configuration point to this distribution", async () => {
@@ -44,6 +61,7 @@ test("documentation and example configuration point to this distribution", async
 
   assert.match(readme, /github\.com\/Flifette\/baby-buddy-rework/);
   assert.match(environment, /BABY_BUDDY_URL=http:\/\/babybuddy:8000/);
+  assert.match(environment, /DASHBOARD_PASSWORD=/);
   assert.doesNotMatch(environment, /BABY_BUDDY_URL=http:\/\/localhost:8000/);
 });
 

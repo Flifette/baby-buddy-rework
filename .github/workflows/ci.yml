@@ -22,8 +22,8 @@ jobs:
       run:
         working-directory: baby-buddy-dashboard/frontend
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: npm
@@ -36,13 +36,13 @@ jobs:
     name: Backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: baby-buddy-dashboard/backend/requirements.txt
-      - run: python -m pip install -r baby-buddy-dashboard/backend/requirements.txt
+          cache-dependency-path: baby-buddy-dashboard/backend/requirements.lock
+      - run: python -m pip install --require-hashes -r baby-buddy-dashboard/backend/requirements.lock
       - run: python -m compileall -q baby-buddy-dashboard/backend
       - run: python -c "import sys; sys.path.insert(0, 'baby-buddy-dashboard'); import backend.server"
 
@@ -50,8 +50,8 @@ jobs:
     name: Home Assistant add-on metadata
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: frenck/action-addon-linter@v2.21
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: frenck/action-addon-linter@f995494fd84fae6310d23617e66d0e37de4f14eb # v2.21
         with:
           path: baby-buddy-dashboard
 
@@ -59,9 +59,9 @@ jobs:
     name: Standalone image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Dockerfile
@@ -77,19 +77,19 @@ jobs:
         include:
           - arch: amd64
             platform: linux/amd64
-            build_from: ghcr.io/home-assistant/amd64-base-python:3.14-alpine3.20
+            build_arch: amd64
           - arch: aarch64
             platform: linux/arm64
-            build_from: ghcr.io/home-assistant/aarch64-base-python:3.14-alpine3.20
+            build_arch: aarch64
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: docker/setup-qemu-action@v4
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: baby-buddy-dashboard
           file: baby-buddy-dashboard/Dockerfile
           platforms: ${{ matrix.platform }}
           push: false
           build-args: |
-            BUILD_FROM=${{ matrix.build_from }}
+            BUILD_ARCH=${{ matrix.build_arch }}

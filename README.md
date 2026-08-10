@@ -73,6 +73,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+Before starting, replace `DASHBOARD_PASSWORD` in `.env` with a unique password of at least 16 characters. Standalone installations require HTTP Basic authentication; your browser will ask for `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD`.
+
 For an existing Baby Buddy server, set `BABY_BUDDY_URL` in `.env` to an address reachable from the container.
 
 To run Baby Buddy and the dashboard together:
@@ -91,6 +93,8 @@ docker run -d --name baby-buddy-dashboard-rework \
   -p 8099:8099 \
   -e BABY_BUDDY_URL=http://your-baby-buddy:8000 \
   -e BABY_BUDDY_API_KEY=your_api_key \
+  -e DASHBOARD_USERNAME=admin \
+  -e DASHBOARD_PASSWORD=replace_with_a_unique_password_of_at_least_16_characters \
   -v baby-buddy-dashboard-data:/data \
   baby-buddy-dashboard-rework
 ```
@@ -121,6 +125,8 @@ The frontend runs on `http://localhost:5173` and the backend on `http://localhos
 | --- | --- | --- |
 | `BABY_BUDDY_URL` | Baby Buddy base URL | `http://babybuddy:8000` |
 | `BABY_BUDDY_API_KEY` | Baby Buddy API token | required outside demo mode |
+| `DASHBOARD_USERNAME` | Standalone HTTP Basic username | required in standalone mode |
+| `DASHBOARD_PASSWORD` | Standalone HTTP Basic password, at least 16 characters | required in standalone mode |
 | `REFRESH_INTERVAL` | Polling interval in seconds | `30` |
 | `UNIT_SYSTEM` | `metric` or `imperial` labels | `metric` |
 | `DEMO_MODE` | Use demonstration data | `false` |
@@ -128,6 +134,8 @@ The frontend runs on `http://localhost:5173` and the backend on `http://localhos
 | `MILK_WASTE_FILE` | Standalone persistence file | `/data/milk-waste.json` |
 
 Keep `.env`, API keys, runtime data, backups, and temporary scripts out of Git.
+
+The Home Assistant add-on relies on authenticated Supervisor ingress and does not use the standalone credentials. Do not expose development ports or bypass ingress for the add-on. See [SECURITY.md](SECURITY.md) for the supported security boundary and responsible disclosure process.
 
 ## Build and test
 
