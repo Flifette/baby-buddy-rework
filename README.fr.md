@@ -71,6 +71,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+Avant le démarrage, remplacer `DASHBOARD_PASSWORD` dans `.env` par un mot de passe unique d'au moins 16 caractères. Les installations autonomes imposent une authentification HTTP Basic ; le navigateur demandera `DASHBOARD_USERNAME` et `DASHBOARD_PASSWORD`.
+
 Cette commande construit votre version depuis le dépôt cloné. Pour utiliser une instance Baby Buddy existante, remplacer `BABY_BUDDY_URL` dans `.env` par une adresse joignable depuis le conteneur.
 
 Pour démarrer Baby Buddy et le dashboard ensemble :
@@ -89,6 +91,8 @@ docker run -d --name baby-buddy-dashboard-rework \
   -p 8099:8099 \
   -e BABY_BUDDY_URL=http://votre-baby-buddy:8000 \
   -e BABY_BUDDY_API_KEY=votre_cle_api \
+  -e DASHBOARD_USERNAME=admin \
+  -e DASHBOARD_PASSWORD=remplacer_par_un_mot_de_passe_unique_de_16_caracteres \
   -v baby-buddy-dashboard-data:/data \
   baby-buddy-dashboard-rework
 ```
@@ -112,6 +116,8 @@ Sous Bash, utiliser `./run_local.sh`. Le frontend écoute sur `http://localhost:
 | --- | --- | --- |
 | `BABY_BUDDY_URL` | URL de base de Baby Buddy | `http://babybuddy:8000` |
 | `BABY_BUDDY_API_KEY` | Jeton API Baby Buddy | obligatoire hors mode démonstration |
+| `DASHBOARD_USERNAME` | Identifiant HTTP Basic de l'installation autonome | obligatoire en mode autonome |
+| `DASHBOARD_PASSWORD` | Mot de passe HTTP Basic autonome, 16 caractères minimum | obligatoire en mode autonome |
 | `REFRESH_INTERVAL` | Intervalle d’actualisation en secondes | `30` |
 | `UNIT_SYSTEM` | Libellés `metric` ou `imperial` | `metric` |
 | `DEMO_MODE` | Utiliser les données de démonstration | `false` |
@@ -119,6 +125,8 @@ Sous Bash, utiliser `./run_local.sh`. Le frontend écoute sur `http://localhost:
 | `MILK_WASTE_FILE` | Fichier de persistance en installation autonome | `/data/milk-waste.json` |
 
 Conserver `.env`, les clés API, les données runtime, les sauvegardes et les scripts temporaires hors de Git.
+
+L'add-on Home Assistant s'appuie sur l'ingress authentifié du Supervisor et n'utilise pas les identifiants autonomes. Ne pas exposer les ports de développement ni contourner l'ingress de l'add-on. Consulter [SECURITY.md](SECURITY.md) pour le périmètre de sécurité pris en charge et le signalement responsable.
 
 ## Construction et tests
 

@@ -1,6 +1,6 @@
 services:
   babybuddy:
-    image: lscr.io/linuxserver/babybuddy:latest
+    image: lscr.io/linuxserver/babybuddy:v2.9.2-ls237@sha256:8f86cc0cdf1c8b251709128e4e4f5266ec3ad73314367726d893b8c7594f2e88
     profiles:
       - full
     environment:
@@ -23,6 +23,8 @@ services:
       - UNIT_SYSTEM=${UNIT_SYSTEM:-metric}
       - DEMO_MODE=${DEMO_MODE:-false}
       - TZ=${TZ:-Europe/Paris}
+      - DASHBOARD_USERNAME=${DASHBOARD_USERNAME:?Set DASHBOARD_USERNAME in .env}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:?Set a DASHBOARD_PASSWORD of at least 16 characters in .env}
     ports:
       - "8099:8099"
     volumes:
