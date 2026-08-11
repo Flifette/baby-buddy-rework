@@ -66,8 +66,6 @@ jobs:
             platform: linux/amd64
           - name: arm64
             platform: linux/arm64
-          - name: armv7
-            platform: linux/arm/v7
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
