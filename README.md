@@ -63,6 +63,12 @@ The add-on is not the only way to use Baby Buddy in Home Assistant. A separate [
 
 ## Home Assistant add-on
 
+Add this repository to Home Assistant with one click:
+
+[![Open your Home Assistant instance and add the Baby Buddy Dashboard Rework repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FFlifette%2Fbaby-buddy-rework)
+
+Alternatively, add it manually:
+
 1. Open **Settings > Add-ons > Add-on Store**.
 2. Open **Repositories** from the three-dot menu.
 3. Add:
