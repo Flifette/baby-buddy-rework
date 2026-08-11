@@ -8,6 +8,21 @@ La configuration permet d’enregistrer les repas, tirages, changes, sommeils, t
 
 Les noms d’actions et leurs champs ont été contrôlés avec l’intégration communautaire [jcgoette/baby_buddy_homeassistant](https://github.com/jcgoette/baby_buddy_homeassistant). Ils peuvent évoluer avec cette intégration.
 
+## Table des matières
+
+- [Aperçu](#aperçu)
+- [1. Prérequis](#1-prérequis)
+- [2. Secrets](#2-secrets)
+- [3. Helpers](#3-helpers)
+- [4. Capteur REST des enfants](#4-capteur-rest-des-enfants)
+- [5. Synchronisation automatique du sélecteur](#5-synchronisation-automatique-du-sélecteur)
+- [6. Résolution dynamique de l’enfant](#6-résolution-dynamique-de-lenfant)
+- [7. Préparation des formulaires](#7-préparation-des-formulaires)
+- [8. Scripts d’enregistrement](#8-scripts-denregistrement)
+- [9. Formulaires Lovelace](#9-formulaires-lovelace)
+- [10. Minuteur](#10-minuteur)
+- [11. Organisation conseillée](#11-organisation-conseillée)
+
 ## Aperçu
 
 <table>
