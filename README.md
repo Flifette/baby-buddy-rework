@@ -64,6 +64,8 @@ The add-on retains the historical slug `baby-buddy-dashboard` so existing instal
 
 Supported Home Assistant architectures: `amd64` and `aarch64`. The legacy 32-bit base images previously declared by the upstream repository are no longer published for the selected Home Assistant Python base.
 
+Standalone Docker installations also support `linux/amd64` and `linux/arm64`. The 32-bit `arm/v7` image is not published because the current Python dependencies do not provide a compatible build chain for that platform.
+
 ## Docker Compose
 
 Clone this repository, create the environment file, and build the dashboard from the checked-out source:

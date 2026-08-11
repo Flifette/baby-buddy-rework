@@ -64,6 +64,8 @@ Le slug historique `baby-buddy-dashboard` est volontairement conservé pour main
 
 Architectures prises en charge : `amd64` et `aarch64`. Les anciennes images de base 32 bits déclarées par le dépôt d’origine ne sont plus publiées pour la base Python Home Assistant sélectionnée.
 
+Les installations Docker autonomes prennent également en charge `linux/amd64` et `linux/arm64`. Les images `arm/v7` 32 bits ne sont pas publiées, car les dépendances Python actuelles ne fournissent pas une chaîne de construction compatible pour cette plateforme.
+
 ## Docker Compose
 
 ```bash
