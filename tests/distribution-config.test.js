@@ -120,3 +120,16 @@ test("the project acknowledgements remain visible in both readmes", async () => 
     assert.match(document, /Codex/i);
   }
 });
+
+test("both readmes provide the one-click Home Assistant repository link", async () => {
+  const readme = await read("README.md");
+  const readmeFr = await read("README.fr.md");
+  const repositoryLink =
+    "https://my.home-assistant.io/redirect/supervisor_add_addon_repository/" +
+    "?repository_url=https%3A%2F%2Fgithub.com%2FFlifette%2Fbaby-buddy-rework";
+
+  for (const document of [readme, readmeFr]) {
+    assert.match(document, /my\.home-assistant\.io\/badges\/supervisor_add_addon_repository\.svg/);
+    assert.ok(document.includes(repositoryLink));
+  }
+});
