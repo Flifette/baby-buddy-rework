@@ -1,6 +1,5 @@
-FROM python:3.12.13-alpine3.22@sha256:a190708a2dec1bd18b1decb539f8e8f5407abaa9bf39cacda583f7f8c11db322 AS build
-
-RUN apk add --no-cache nodejs npm
+# syntax=docker/dockerfile:1
+FROM --platform=$BUILDPLATFORM node:20.15.1-alpine3.20@sha256:09dbe0a53523c2482d85a037efc6b0e8e8bb16c6f1acf431fe36aa0ebc871c06 AS build
 
 COPY baby-buddy-dashboard/frontend/ /tmp/frontend/
 WORKDIR /tmp/frontend
