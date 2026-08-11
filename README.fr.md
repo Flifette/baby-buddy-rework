@@ -64,6 +64,12 @@ L’add-on n’est pas la seule manière d’utiliser Baby Buddy dans Home Assis
 
 ## Installation Home Assistant
 
+Ajouter ce dépôt à Home Assistant en un clic :
+
+[![Ouvrir votre instance Home Assistant et ajouter le dépôt Baby Buddy Dashboard Rework](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FFlifette%2Fbaby-buddy-rework)
+
+Il est également possible de l’ajouter manuellement :
+
 1. Ouvrir **Paramètres > Modules complémentaires > Boutique des modules complémentaires**.
 2. Dans le menu à trois points, ouvrir **Dépôts**.
 3. Ajouter :
