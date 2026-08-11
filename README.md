@@ -6,6 +6,20 @@ This project is derived from [mbentancour/baby-buddy-dashboard](https://github.c
 
 [Documentation française](README.fr.md)
 
+## Table of contents
+
+- [About and acknowledgements](#about-and-acknowledgements)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Home Assistant cards and helpers](#home-assistant-cards-and-helpers)
+- [Home Assistant add-on](#home-assistant-add-on)
+- [Docker Compose](#docker-compose)
+- [Standalone Docker](#standalone-docker)
+- [Local development](#local-development)
+- [Configuration](#configuration)
+- [Build and test](#build-and-test)
+- [License and attribution](#license-and-attribution)
+
 ## About and acknowledgements
 
 I am not an experienced developer; I am still learning, and this project was created largely with Codex guidance and supervision. I am sharing it in the hope that it may help others, without claiming that I will be able to maintain it indefinitely.
