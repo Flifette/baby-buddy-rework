@@ -1,4 +1,6 @@
-export function getAge(birthDate) {
+import { localeFor, translate } from "./i18nCore.js";
+
+export function getAge(birthDate, language = "fr") {
   const birth = new Date(birthDate);
   const now = new Date();
   let months =
@@ -8,14 +10,12 @@ export function getAge(birthDate) {
   if (days < 0) months--;
   const adjustedDays = days < 0 ? 30 + days : days;
   if (months < 1)
-    return `${Math.max(0, Math.floor((now - birth) / 86400000))} jours`;
+    return translate("age.days", { count: Math.max(0, Math.floor((now - birth) / 86400000)) }, language);
   if (months < 12)
-    return `${months} mois ${adjustedDays} j`;
+    return translate("age.months", { months, days: adjustedDays }, language);
   const years = Math.floor(months / 12);
   const remainingMonths = months % 12;
-  if (remainingMonths === 0)
-    return `${years} an${years > 1 ? "s" : ""}`;
-  return `${years} an${years > 1 ? "s" : ""} ${remainingMonths} mois`;
+  return translate("age.years", { years, months: remainingMonths }, language);
 }
 
 export function formatElapsed(seconds) {
@@ -24,19 +24,19 @@ export function formatElapsed(seconds) {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export function timeAgo(dateStr) {
+export function timeAgo(dateStr, language = "fr") {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "à l’instant";
-  if (mins < 60) return `il y a ${mins} min`;
+  if (mins < 1) return translate("time.now", {}, language);
+  if (mins < 60) return translate("time.minutesAgo", { count: mins }, language);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `il y a ${hours} H`;
+  if (hours < 24) return translate("time.hoursAgo", { count: hours }, language);
   const days = Math.floor(hours / 24);
-  return `il y a ${days} j`;
+  return translate("time.daysAgo", { count: days }, language);
 }
 
-export function formatTime(dateStr) {
-  return new Date(dateStr).toLocaleTimeString([], {
+export function formatTime(dateStr, language = "fr") {
+  return new Date(dateStr).toLocaleTimeString(localeFor(language), {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -50,11 +50,11 @@ export function parseDuration(durationStr) {
   return parts[0];
 }
 
-export function formatDuration(durationStr) {
+export function formatDuration(durationStr, language = "fr") {
   if (!durationStr) return "—";
   const hours = parseDuration(durationStr);
-  if (hours < 1) return `${Math.round(hours * 60)}m`;
-  return `${hours.toFixed(1)} H`;
+  if (hours < 1) return `${Math.round(hours * 60)} ${translate("unit.minuteShort", {}, language)}`;
+  return `${hours.toFixed(1)} ${translate("unit.hourShort", {}, language)}`;
 }
 
 export function applyMilkWasteToFeedings(feedings = [], milkWaste = []) {
@@ -98,30 +98,30 @@ export function applyMilkWasteToFeedings(feedings = [], milkWaste = []) {
   return adjusted;
 }
 
-export function toFeedingTimeline(feedings, volumeUnit = "mL") {
+export function toFeedingTimeline(feedings, volumeUnit = "mL", language = "fr") {
   const methodLabels = {
-    bottle: "Biberon",
-    "left breast": "Sein gauche",
-    "right breast": "Sein droit",
-    "both breasts": "Deux seins",
-    "parent fed": "Donné par un parent",
-    "self fed": "Autonome",
+    bottle: translate("feeding.method.bottle", {}, language),
+    "left breast": translate("feeding.method.leftBreast", {}, language),
+    "right breast": translate("feeding.method.rightBreast", {}, language),
+    "both breasts": translate("feeding.method.bothBreasts", {}, language),
+    "parent fed": translate("feeding.method.parentFed", {}, language),
+    "self fed": translate("feeding.method.selfFed", {}, language),
   };
   const typeLabels = {
-    "breast milk": "Lait maternel",
-    "fortified breast milk": "Lait maternel enrichi",
-    formula: "Lait infantile",
-    "solid food": "Aliments solides",
+    "breast milk": translate("feeding.type.breastMilk", {}, language),
+    "fortified breast milk": translate("feeding.type.fortifiedBreastMilk", {}, language),
+    formula: translate("feeding.type.formula", {}, language),
+    "solid food": translate("feeding.type.solidFood", {}, language),
   };
 
   const formatAmount = (amount) => typeof volumeUnit === "function" ? volumeUnit(amount) : `${amount} ${volumeUnit}`;
   return feedings.map((f) => {
     const hasAmount = f.amount != null || f._originalAmount != null;
-    const wasteLabel = Number(f._milkWasteAmount || 0) > 0 ? ` · ${formatAmount(f._milkWasteAmount)} non bu` : "";
+    const wasteLabel = Number(f._milkWasteAmount || 0) > 0 ? ` · ${translate("feeding.wasteSuffix", { amount: formatAmount(f._milkWasteAmount) }, language)}` : "";
     return {
-      time: formatTime(f.end || f.start),
-      label: `${hasAmount ? formatAmount(Number(f.amount || 0)) : ""} ${methodLabels[f.method] || typeLabels[f.type] || f.method || f.type || ""}${wasteLabel}`.trim() || "Repas",
-      detail: timeAgo(f.end || f.start),
+      time: formatTime(f.end || f.start, language),
+      label: `${hasAmount ? formatAmount(Number(f.amount || 0)) : ""} ${methodLabels[f.method] || typeLabels[f.type] || f.method || f.type || ""}${wasteLabel}`.trim() || translate("activity.feeding", {}, language),
+      detail: timeAgo(f.end || f.start, language),
       amount: f.amount || 0,
       type: f.type,
       method: f.method,
@@ -130,42 +130,42 @@ export function toFeedingTimeline(feedings, volumeUnit = "mL") {
   });
 }
 
-export function toDiaperTimeline(changes) {
+export function toDiaperTimeline(changes, language = "fr") {
   return changes.map((c) => ({
-    time: formatTime(c.time),
+    time: formatTime(c.time, language),
     type: c.solid && c.wet ? "both" : c.solid ? "solid" : "wet",
-    ago: timeAgo(c.time),
+    ago: timeAgo(c.time, language),
     color: c.color,
     entry: c,
   }));
 }
 
-export function toSleepBlocks(sleepEntries) {
+export function toSleepBlocks(sleepEntries, language = "fr") {
   return sleepEntries.map((s) => ({
-    start: formatTime(s.start),
-    end: s.end ? formatTime(s.end) : "en cours",
+    start: formatTime(s.start, language),
+    end: s.end ? formatTime(s.end, language) : translate("common.ongoing", {}, language),
     duration: parseDuration(s.duration),
     nap: s.nap,
     entry: s,
   }));
 }
 
-export function toNoteTimeline(notes) {
+export function toNoteTimeline(notes, language = "fr") {
   return notes.map((n) => ({
-    time: formatTime(n.time),
+    time: formatTime(n.time, language),
     text: n.note,
-    ago: timeAgo(n.time),
+    ago: timeAgo(n.time, language),
     entry: n,
   }));
 }
 
-export function toGrowthSeries(entries, valueKey) {
+export function toGrowthSeries(entries, valueKey, language = "fr") {
   return entries
     .slice()
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .map((e) => ({
       timestamp: new Date(e.date).getTime(),
-      date: new Date(e.date).toLocaleDateString([], {
+      date: new Date(e.date).toLocaleDateString(localeFor(language), {
         month: "short",
         day: "numeric",
       }),
@@ -174,8 +174,8 @@ export function toGrowthSeries(entries, valueKey) {
     }));
 }
 
-export function formatGrowthTick(timestamp) {
-  return new Date(timestamp).toLocaleDateString([], {
+export function formatGrowthTick(timestamp, language = "fr") {
+  return new Date(timestamp).toLocaleDateString(localeFor(language), {
     month: "short",
     day: "numeric",
   });
@@ -234,28 +234,28 @@ export function aggregateTummyByDay(entries) {
   return days.map((d) => ({ day: d.label, minutes: Math.round(sums[d.dateStr]) }));
 }
 
-export function aggregateByPeriod(entries, kind, period = "week", subtractEntries = []) {
+export function aggregateByPeriod(entries, kind, period = "week", subtractEntries = [], language = "fr") {
   const days = { day: 1, week: 7, month: 30, halfyear: 183, year: 365 }[period] || 7;
   const source = Array.isArray(entries) ? entries : [];
   const subtractions = Array.isArray(subtractEntries) ? subtractEntries : [];
   if (period === "all") {
     const keys = [...new Set([...source, ...subtractions].map((e) => entryDateStr(e.start || e.time || e.date)).filter(Boolean))].sort();
-    return keys.map((key) => ({ day: new Date(`${key}T12:00:00`).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }), dateKey: key, amount: Math.max(0, source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0) - subtractions.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0)), hours: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration), 0), minutes: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration) * 60, 0) }));
+    return keys.map((key) => ({ day: new Date(`${key}T12:00:00`).toLocaleDateString(localeFor(language), { day: "2-digit", month: "short" }), dateKey: key, amount: Math.max(0, source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0) - subtractions.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0)), hours: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration), 0), minutes: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration) * 60, 0) }));
   }
-  const result = getLastNDays(days);
+  const result = getLastNDays(days, language);
   const sums = Object.fromEntries(result.map((d) => [d.dateStr, { amount: 0, hours: 0, minutes: 0 }]));
   source.forEach((e) => { const key = entryDateStr(e.start || e.time || e.date); if (!sums[key]) return; sums[key].amount += Number(e.amount || 0); sums[key].hours += parseDuration(e.duration); sums[key].minutes += parseDuration(e.duration) * 60; });
   subtractions.forEach((e) => { const key = entryDateStr(e.start || e.time || e.date); if (sums[key]) sums[key].amount -= Number(e.amount || 0); });
   return result.map((d) => ({ day: d.label, dateKey: d.dateStr, amount: Math.max(0, Math.round(sums[d.dateStr].amount)), hours: Math.round(sums[d.dateStr].hours * 10) / 10, minutes: Math.round(sums[d.dateStr].minutes) }));
 }
 
-function getLastNDays(n) {
+function getLastNDays(n, language = "fr") {
   const result = [];
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    const month = d.toLocaleDateString([], { month: "short", day: "numeric" });
+    const month = d.toLocaleDateString(localeFor(language), { month: "short", day: "numeric" });
     result.push({
       label: month,
       dateStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
@@ -264,7 +264,7 @@ function getLastNDays(n) {
   return result;
 }
 
-export function dailyFeedingTotals(entries, numDays = 30, subtractEntries = []) {
+export function dailyFeedingTotals(entries, numDays = 30, subtractEntries = [], language = "fr") {
   if (numDays == null) {
     const sums = new Map();
     entries.forEach((entry) => {
@@ -278,12 +278,12 @@ export function dailyFeedingTotals(entries, numDays = 30, subtractEntries = []) 
     return [...sums.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, amount]) => ({
-        date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        date: new Date(`${key}T12:00:00`).toLocaleDateString(localeFor(language), { month: "short", day: "numeric" }),
         dateKey: key,
         amount: Math.max(0, Math.round(amount)),
       }));
   }
-  const days = getLastNDays(numDays);
+  const days = getLastNDays(numDays, language);
   const sums = {};
   days.forEach((d) => (sums[d.dateStr] = 0));
   entries.forEach((e) => {
@@ -329,7 +329,7 @@ export function getEntriesForDateKey(entries, targetDateKey, dateField = "start"
   );
 }
 
-export function dailySleepTotals(entries, numDays = 30) {
+export function dailySleepTotals(entries, numDays = 30, language = "fr") {
   if (numDays == null) {
     const sums = new Map();
     entries.forEach((entry) => {
@@ -339,12 +339,12 @@ export function dailySleepTotals(entries, numDays = 30) {
     return [...sums.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, hours]) => ({
-        date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        date: new Date(`${key}T12:00:00`).toLocaleDateString(localeFor(language), { month: "short", day: "numeric" }),
         dateKey: key,
         hours: Math.round(hours * 10) / 10,
       }));
   }
-  const days = getLastNDays(numDays);
+  const days = getLastNDays(numDays, language);
   const sums = {};
   days.forEach((d) => (sums[d.dateStr] = 0));
   entries.forEach((e) => {
@@ -356,7 +356,7 @@ export function dailySleepTotals(entries, numDays = 30) {
   return firstNonZero > 0 ? result.slice(firstNonZero) : result;
 }
 
-export function dailyTummyTotals(entries, numDays = 30) {
+export function dailyTummyTotals(entries, numDays = 30, language = "fr") {
   if (numDays == null) {
     const sums = new Map();
     entries.forEach((entry) => {
@@ -366,12 +366,12 @@ export function dailyTummyTotals(entries, numDays = 30) {
     return [...sums.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, minutes]) => ({
-        date: new Date(`${key}T12:00:00`).toLocaleDateString([], { month: "short", day: "numeric" }),
+        date: new Date(`${key}T12:00:00`).toLocaleDateString(localeFor(language), { month: "short", day: "numeric" }),
         dateKey: key,
         minutes: Math.round(minutes),
       }));
   }
-  const days = getLastNDays(numDays);
+  const days = getLastNDays(numDays, language);
   const sums = {};
   days.forEach((day) => (sums[day.dateStr] = 0));
   entries.forEach((entry) => {

@@ -1,7 +1,10 @@
+import { useLanguage } from "../utils/i18n";
+
 export default function DiaperBadge({ type }) {
+  const { t } = useLanguage();
   const bg =
     type === "solid" ? "#D97706" : type === "both" ? "#8B5CF6" : "#3B82F6";
-  const label = type === "both" ? "Mixte" : type === "solid" ? "Solide" : "Humide";
+  const label = type === "both" ? t("diaper.mixed") : type === "solid" ? t("diaper.solid") : t("diaper.wet");
   return (
     <span
       style={{

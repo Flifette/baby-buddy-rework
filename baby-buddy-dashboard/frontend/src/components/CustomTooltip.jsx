@@ -1,10 +1,12 @@
 import { useUnits } from "../utils/units";
+import { useLanguage } from "../utils/i18n";
 
 export default function CustomTooltip({ active, payload, label, labelFormatter }) {
   const units = useUnits();
+  const { t } = useLanguage();
   if (!active || !payload?.length) return null;
   const formattedLabel = labelFormatter ? labelFormatter(label) : label;
-  const names = { amount: "Quantité", minutes: "Minutes", hours: "Heures", weight: "Poids", height: "Taille" };
+  const names = { amount: t("chart.amount"), minutes: t("chart.minutes"), hours: t("chart.hours"), weight: t("chart.weight"), height: t("chart.height") };
   return (
     <div
       style={{

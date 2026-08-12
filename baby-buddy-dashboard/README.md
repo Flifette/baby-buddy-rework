@@ -1,7 +1,9 @@
 # Baby Buddy Dashboard Rework
 
-Interface française responsive pour consulter et saisir les activités d’une instance Baby Buddy depuis Home Assistant.
+Bilingual French/English responsive interface for viewing and recording Baby Buddy activities from Home Assistant.
 
-Elle comprend les vues Aperçu, Croissance, Journée, Routine et Notes, ainsi que le suivi des tirages, du stock estimé et du lait non bu.
+It includes Overview, Growth, Day, Routine, and Notes views, together with pumping, estimated milk stock, and uneaten-milk tracking. A persistent **FR / EN** selector in the dashboard header lets each browser keep its preferred language.
 
-Consultez [la documentation](DOCS.md) avant le premier démarrage.
+Interface responsive bilingue français/anglais pour consulter et saisir les activités Baby Buddy depuis Home Assistant. Le sélecteur **FR / EN** de l’en-tête mémorise la langue choisie dans chaque navigateur.
+
+Read the bilingual [documentation / documentation bilingue](DOCS.md) before the first start.

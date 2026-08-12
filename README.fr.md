@@ -1,6 +1,6 @@
 # Baby Buddy Dashboard Rework
 
-Dashboard indépendant en français pour [Baby Buddy](https://github.com/babybuddy/babybuddy), installable comme add-on Home Assistant, application Docker autonome ou environnement de développement local.
+Dashboard indépendant bilingue français/anglais pour [Baby Buddy](https://github.com/babybuddy/babybuddy), installable comme add-on Home Assistant, application Docker autonome ou environnement de développement local.
 
 Ce projet est dérivé de [mbentancour/baby-buddy-dashboard](https://github.com/mbentancour/baby-buddy-dashboard) sous licence MIT. L’architecture d’origine est conservée, tandis que l’interface et la gestion des données ont été largement retravaillées.
 
@@ -10,6 +10,7 @@ Ce projet est dérivé de [mbentancour/baby-buddy-dashboard](https://github.com/
 
 - [À propos et remerciements](#à-propos-et-remerciements)
 - [Fonctionnalités](#fonctionnalités)
+- [Choix de la langue](#choix-de-la-langue)
 - [Captures d’écran](#captures-décran)
 - [Cartes et helpers Home Assistant](#cartes-et-helpers-home-assistant)
 - [Installation Home Assistant](#installation-home-assistant)
@@ -37,9 +38,18 @@ Mais je tiens surtout à adresser cent millions de mercis à [herveaurel/HomeAss
 - Suivi des repas, sommeils, changes, tirages, temps sur le ventre, mesures et notes
 - Périodes, graphiques, cartes et préférences configurables
 - Stock estimé de lait maternel et occurrences indépendantes de lait non bu
-- Traduction française des données provenant de Baby Buddy
+- Interface complète en français et en anglais avec choix de langue mémorisé
+- Traduction des données Baby Buddy, dates, graphiques, formulaires et infobulles
 
 Le lait non bu est propre au dashboard et persiste dans `/data/milk-waste.json`. Il réduit la quantité réellement bue, sans créer de second repas Baby Buddy et sans provoquer une seconde déduction du stock.
+
+## Choix de la langue
+
+Le sélecteur compact **FR / EN** placé dans l’en-tête change immédiatement la langue du dashboard. Il traduit les vues, tuiles, formulaires, boutons, graphiques, infobulles, dates, heures, libellés d’activités Baby Buddy ainsi que les messages de validation et d’erreur.
+
+Le choix est mémorisé localement par le navigateur. Chaque appareil ou profil de navigateur peut donc conserver sa propre préférence, sans modifier les données Baby Buddy ni les valeurs techniques envoyées à son API. Le français est utilisé lorsqu’aucun choix n’a encore été enregistré.
+
+Les champs de configuration de l’add-on suivent la langue sélectionnée dans Home Assistant. L’onglet **Documentation** du Supervisor réunit les instructions anglaises et françaises sur une même page.
 
 ## Captures d’écran
 
@@ -80,6 +90,8 @@ Il est également possible de l’ajouter manuellement :
 
 4. Installer **Baby Buddy Dashboard Rework**.
 5. Renseigner l’URL et la clé API de Baby Buddy, puis démarrer l’add-on.
+
+La [documentation bilingue du Supervisor](baby-buddy-dashboard/DOCS.md) détaille la connexion, le choix de langue, la persistance et les sauvegardes.
 
 Le slug historique `baby-buddy-dashboard` est volontairement conservé pour maintenir la compatibilité avec l’installation existante et ses données `/data`. Ce fork ne peut donc pas être installé côte à côte avec l’add-on d’origine sur la même instance Home Assistant.
 

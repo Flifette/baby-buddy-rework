@@ -30,3 +30,11 @@ test("les occurrences sont sélectionnées par leur clé de date stable", () => 
   assert.deepEqual(getEntriesForDateKey(entries, dateKey), [feeding]);
   assert.deepEqual(getEntriesForDateKey(entries, undefined), []);
 });
+
+test("les libellés de graphiques suivent la langue sans modifier leur clé de date", () => {
+  const french = aggregateByPeriod([feeding], "feeding", "all", [], "fr")[0];
+  const english = aggregateByPeriod([feeding], "feeding", "all", [], "en")[0];
+  assert.equal(french.dateKey, dateKey);
+  assert.equal(english.dateKey, dateKey);
+  assert.notEqual(french.day, english.day);
+});

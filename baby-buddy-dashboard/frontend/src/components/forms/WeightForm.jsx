@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { api } from "../../api";
-import Modal, { FormField, FormInput, FormButton, DeleteIconButton } from "../Modal";
+import Modal, { FormField, FormInput, FormButton, FormError, DeleteIconButton } from "../Modal";
 import { colors } from "../../utils/colors";
 import { useUnits } from "../../utils/units";
+import { useLanguage } from "../../utils/i18n";
+import { apiErrorTranslationKey } from "../../utils/formValidation";
 
 function toLocalDate(date) {
   const d = new Date(date);
@@ -12,15 +14,17 @@ function toLocalDate(date) {
 
 export default function WeightForm({ childId, entry, onDone, onClose }) {
   const units = useUnits();
+  const { t } = useLanguage();
   const isEdit = !!entry;
   const [weight, setWeight] = useState(entry?.weight ? String(entry.weight) : "");
   const [date, setDate] = useState(entry?.date ? toLocalDate(entry.date) : toLocalDate(new Date()));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteWeight(entry.id); onDone(); } catch { setSaving(false); } };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!weight) return;
+    setError("");
     setSaving(true);
     try {
       const data = {
@@ -34,37 +38,39 @@ export default function WeightForm({ childId, entry, onDone, onClose }) {
         await api.createWeight(data);
       }
       onDone();
-    } catch {
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={isEdit ? "Modifier le poids" : "Ajouter un poids"} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.weight.edit" : "form.weight.add")} onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <FormField label={`Poids (${units.weight})`}>
+        <FormField label={`${t("activity.weight")} (${units.weight})`}>
           <FormInput
             type="number"
             value={weight}
-            onChange={(e) => setWeight(e.target.value)}
+            onChange={(e) => { setWeight(e.target.value); setError(""); }}
             placeholder="5.0"
-            min="0"
+            min="0.01"
             max="30"
             step="0.01"
             autoFocus
             required
           />
         </FormField>
-        <FormField label="Date">
+        <FormField label={t("common.date")}>
           <FormInput
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => { setDate(e.target.value); setError(""); }}
             required
           />
         </FormField>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ flex: 1 }}><FormButton color={colors.growth} disabled={saving || !weight}>
-          {saving ? "Enregistrement…" : isEdit ? "Modifier le poids" : "Enregistrer le poids"}
+        <FormError>{error}</FormError>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ flex: 1 }}><FormButton color={colors.growth} disabled={saving}>
+          {saving ? t("common.saving") : t(isEdit ? "form.weight.edit" : "form.weight.save")}
         </FormButton></div>{isEdit && <DeleteIconButton color={colors.growth} disabled={saving} onConfirm={remove} />}</div>
       </form>
     </Modal>
