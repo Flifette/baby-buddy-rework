@@ -69,9 +69,13 @@ The Home Assistant add-on configuration fields follow the language selected in H
 
 ## Home Assistant cards and helpers
 
+> **Important:** Baby Buddy Dashboard Rework does not replace Baby Buddy. A working Baby Buddy instance is required. The community Home Assistant Baby Buddy integration is optional for the Dashboard add-on itself, but required for the example cards, helpers, and HAOS scripts below.
+
 The add-on is not the only way to use Baby Buddy in Home Assistant. A separate [French Home Assistant examples guide](examples/home-assistant/README.md) shows how to build reusable Lovelace forms, input helpers, dynamically selected children, quick-action cards, and activity timers with the community Baby Buddy integration.
 
 ## Home Assistant add-on
+
+Before installing the add-on, make sure you already have a working Baby Buddy instance that Home Assistant can reach. You will need its URL and an API key. The separate Home Assistant Baby Buddy integration is **not required** to use this Dashboard add-on.
 
 Add this repository to Home Assistant with one click:
 
