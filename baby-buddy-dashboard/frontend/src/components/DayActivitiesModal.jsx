@@ -10,9 +10,11 @@ import {
   parseDuration,
 } from "../utils/formatters";
 import { useUnits } from "../utils/units";
+import { useLanguage } from "../utils/i18n";
 
 export default function DayActivitiesModal({ day, type, data, onEditEntry, onClose }) {
   const units = useUnits();
+  const { language, locale, t } = useLanguage();
 
   const getIcon = () => {
     switch (type) {
@@ -34,24 +36,24 @@ case "tummy": return <Icons.BabyCrawl />;
 
   const getTitle = () => {
     const titles = {
-      feeding: "Repas",
-      sleep: "Sommeil",
-      tummy: "Temps sur le ventre",
+      feeding: t("activity.feeding"),
+      sleep: t("activity.sleep"),
+      tummy: t("activity.tummy"),
     };
-    return `${titles[type] || "Activités"} - ${day}`;
+    return `${titles[type] || t("activity.activities")} - ${day}`;
   };
 
   const renderContent = () => {
     if (!data || data.length === 0) {
       return (
         <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 40 }}>
-          Aucune activité enregistrée pour cette journée
+          {t("chart.noActivity")}
         </div>
       );
     }
 
     if (type === "feeding") {
-      const timeline = toFeedingTimeline(data, units.volume);
+      const timeline = toFeedingTimeline(data, units.volume, language);
       return (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {timeline.map((f, i, arr) => (
@@ -77,7 +79,7 @@ case "tummy": return <Icons.BabyCrawl />;
     }
 
     if (type === "sleep") {
-      const blocks = toSleepBlocks(data);
+      const blocks = toSleepBlocks(data, language);
       return (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {blocks.map((s, i, arr) => (
@@ -91,8 +93,8 @@ case "tummy": return <Icons.BabyCrawl />;
             >
               <TimelineItem
                 time={`${s.start}–${s.end}`}
-                label={`${s.duration.toFixed(1)} H${s.nap ? " · Sieste" : ""}`}
-                detail={`${s.start} à ${s.end}`}
+                label={`${s.duration.toFixed(1)} ${t("unit.hourShort")}${s.nap ? ` · ${t("overview.nap")}` : ""}`}
+                detail={`${s.start} ${t("common.at")} ${s.end}`}
                 color={colors.sleep}
                 isLast={i === arr.length - 1}
               />
@@ -105,19 +107,19 @@ case "tummy": return <Icons.BabyCrawl />;
     if (type === "tummy") {
       return (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {data.map((t, i, arr) => (
+          {data.map((entry, i, arr) => (
             <div
               key={i}
               className="entry-clickable"
               onClick={() => {
-                onEditEntry?.("tummy", t);
+                onEditEntry?.("tummy", entry);
                 onClose();
               }}
             >
               <TimelineItem
-                time={new Date(t.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                label={`${Math.round(parseDuration(t.duration) * 60)} min${t.milestone ? ` · ${t.milestone}` : ""}`}
-                detail={`${new Date(t.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} à ${new Date(t.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                time={new Date(entry.start).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
+                label={`${Math.round(parseDuration(entry.duration) * 60)} ${t("unit.minuteShort")}${entry.milestone ? ` · ${entry.milestone}` : ""}`}
+                detail={`${new Date(entry.start).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })} ${t("common.at")} ${new Date(entry.end).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}`}
                 color={colors.tummy}
                 isLast={i === arr.length - 1}
               />

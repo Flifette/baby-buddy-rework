@@ -1,23 +1,25 @@
 import { useState } from "react";
 import { api } from "../../api";
-import Modal, { FormField, FormSelect, FormInput, FormButton, DeleteIconButton } from "../Modal";
+import Modal, { FormField, FormSelect, FormInput, FormButton, FormError, DeleteIconButton } from "../Modal";
 import { colors } from "../../utils/colors";
 import { useUnits } from "../../utils/units";
+import { useLanguage } from "../../utils/i18n";
+import { apiErrorTranslationKey } from "../../utils/formValidation";
 
 const TYPES = [
-  { value: "breast milk", label: "Lait maternel" },
-  { value: "formula", label: "Lait en poudre" },
-  { value: "fortified breast milk", label: "Lait maternel enrichi" },
-  { value: "solid food", label: "Aliments solides" },
+  { value: "breast milk", key: "feeding.type.breastMilk" },
+  { value: "formula", key: "feeding.type.formula" },
+  { value: "fortified breast milk", key: "feeding.type.fortifiedBreastMilk" },
+  { value: "solid food", key: "feeding.type.solidFood" },
 ];
 
 const METHODS = [
-  { value: "bottle", label: "Biberon" },
-  { value: "left breast", label: "Sein gauche" },
-  { value: "right breast", label: "Sein droit" },
-  { value: "both breasts", label: "Deux seins" },
-  { value: "parent fed", label: "Donné par un parent" },
-  { value: "self fed", label: "Autonome" },
+  { value: "bottle", key: "feeding.method.bottle" },
+  { value: "left breast", key: "feeding.method.leftBreast" },
+  { value: "right breast", key: "feeding.method.rightBreast" },
+  { value: "both breasts", key: "feeding.method.bothBreasts" },
+  { value: "parent fed", key: "feeding.method.parentFed" },
+  { value: "self fed", key: "feeding.method.selfFed" },
 ];
 
 function toLocalDatetime(date) {
@@ -27,6 +29,9 @@ function toLocalDatetime(date) {
 
 export default function FeedingForm({ childId, timerId, entry, onDone, onClose }) {
   const units = useUnits();
+  const { t } = useLanguage();
+  const typeOptions = TYPES.map((option) => ({ ...option, label: t(option.key) }));
+  const methodOptions = METHODS.map((option) => ({ ...option, label: t(option.key) }));
   const isEdit = !!entry;
   const now = new Date();
   const fifteenMinsAgo = new Date(now.getTime() - 15 * 60 * 1000);
@@ -37,10 +42,16 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
   const [end, setEnd] = useState(entry?.end ? toLocalDatetime(new Date(entry.end)) : toLocalDatetime(now));
   const [notes, setNotes] = useState(entry?.notes || "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteFeeding(entry.id); onDone(); } catch { setSaving(false); } };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    if (!timerId && new Date(end) <= new Date(start)) {
+      setError(t("form.error.endBeforeStart"));
+      return;
+    }
     setSaving(true);
     try {
       const data = { type, method };
@@ -61,53 +72,56 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
         await api.createFeeding(data);
       }
       onDone();
-    } catch {
+    } catch (requestError) {
+      console.error("Unable to save feeding", requestError);
+      setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={isEdit ? "Modifier le repas" : "Ajouter un repas"} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.feeding.edit" : "form.feeding.add")} onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <FormField label="Type de lait">
-          <FormSelect options={TYPES} value={type} onChange={(e) => setType(e.target.value)} />
+        <FormField label={t("form.feeding.type")}>
+          <FormSelect options={typeOptions} value={type} onChange={(e) => { setType(e.target.value); setError(""); }} />
         </FormField>
-        <FormField label="Mode">
-          <FormSelect options={METHODS} value={method} onChange={(e) => setMethod(e.target.value)} />
+        <FormField label={t("form.feeding.method")}>
+          <FormSelect options={methodOptions} value={method} onChange={(e) => { setMethod(e.target.value); setError(""); }} />
         </FormField>
-        <FormField label={`Quantité (${units.volume})`}>
-          <FormInput type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Facultative" min="0" step="5" />
+        <FormField label={`${t("common.quantity")} (${units.volume})`}>
+          <FormInput type="number" value={amount} onChange={(e) => { setAmount(e.target.value); setError(""); }} min="1" step="1" required />
         </FormField>
         {(isEdit || !timerId) && (
           <>
-            <FormField label="Début">
+            <FormField label={t("common.start")}>
               <FormInput
                 type="datetime-local"
                 value={start}
-                onChange={(e) => setStart(e.target.value)}
+                onChange={(e) => { setStart(e.target.value); setError(""); }}
                 required
               />
             </FormField>
-            <FormField label="Fin">
+            <FormField label={t("common.end")}>
               <FormInput
                 type="datetime-local"
                 value={end}
-                onChange={(e) => setEnd(e.target.value)}
+                onChange={(e) => { setEnd(e.target.value); setError(""); }}
                 required
               />
             </FormField>
           </>
         )}
-        <FormField label="Note">
+        <FormField label={t("common.note")}>
           <FormInput
             type="text"
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Facultative"
+            onChange={(e) => { setNotes(e.target.value); setError(""); }}
+            placeholder={t("common.optional")}
           />
         </FormField>
+        <FormError>{error}</FormError>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ flex: 1 }}><FormButton color={colors.feeding} disabled={saving}>
-          {saving ? "Enregistrement..." : isEdit ? "Modifier le repas" : "Enregistrer le repas"}
+          {saving ? t("common.saving") : t(isEdit ? "form.feeding.editAction" : "form.feeding.save")}
         </FormButton></div>{isEdit && <DeleteIconButton color={colors.feeding} disabled={saving} onConfirm={remove} />}</div>
       </form>
     </Modal>

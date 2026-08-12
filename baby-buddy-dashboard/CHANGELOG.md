@@ -1,5 +1,60 @@
 # Changelog
 
+# 1.5.9
+
+- Harmonisation du symbole français des heures en `h` minuscule dans les tuiles, listes, graphiques et durées relatives.
+- Documentation Home Assistant désormais bilingue anglais/français et explication du sélecteur de langue persistant.
+
+# 1.5.8
+
+- Adaptation de la couleur de la barre du minuteur au type d’occurrence actif : orange pour les repas, violet pour le sommeil et rose pour le temps sur le ventre.
+
+# 1.5.7
+
+- Application du cadre de largeur maîtrisée à tous les contrôles temporels natifs, y compris les champs de date des formulaires Poids et Taille.
+
+# 1.5.6
+
+- Encadrement indépendant des contrôles date/heure natifs afin que leur largeur interne propre au navigateur ne puisse plus dépasser visuellement des formulaires.
+
+# 1.5.5
+
+- Compensation ciblée de la largeur intrinsèque ajoutée par iPadOS aux champs date/heure afin de les aligner exactement avec les autres champs.
+
+# 1.5.4
+
+- Renforcement de la mise en page des champs date/heure natifs sur Safari/iPadOS afin de conserver la marge intérieure des formulaires.
+
+# 1.5.3
+
+- Traduction explicite des bulles natives de validation selon la langue sélectionnée dans le dashboard, indépendamment de la langue du navigateur ou de l’appareil.
+- Correction du dépassement horizontal des champs, notamment les sélecteurs de date et d’heure sur Safari/iPadOS.
+
+# 1.5.2
+
+- Quantité de repas rendue obligatoire avec saisie au millilitre près.
+- Détection des chevauchements de sommeil et de sieste avec message détaillé et traduit en français/anglais.
+- Effacement immédiat des anciennes erreurs lorsqu’un champ est corrigé.
+- Clarification du formulaire de lait non bu sans suggérer une seconde déduction du stock.
+- Sélection du type de change rendue explicite et obligatoire.
+- Messages d’erreur traduits et différenciés pour les champs incomplets ou invalides, les doublons, les problèmes de connexion, les refus d’accès et les erreurs serveur.
+
+# 1.5.1
+
+- Correction de la soumission tactile des formulaires sur Safari/iPadOS.
+- Affichage localisé des heures en anglais dans Journée et Routine, avec indicateurs AM/PM.
+- Ajout explicite de la langue active aux contrôles natifs des formulaires.
+- Affichage d’un message explicite lorsque Baby Buddy refuse un enregistrement ou que l’heure de fin précède l’heure de début.
+
+# 1.5.0
+
+- Ajout d’un sélecteur de langue compact français/anglais dans l’en-tête.
+- Traduction complète des vues, tuiles, formulaires, graphiques, infobulles, fenêtres d’occurrences, réglages et messages d’état.
+- Adaptation des dates, heures, durées et libellés Baby Buddy à la langue active.
+- Conservation du choix de langue dans les préférences locales du navigateur.
+- Séparation stricte entre les traductions d’interface et les identifiants techniques/API afin de préserver les données et les occurrences existantes.
+- Ajout de tests garantissant la parité des catalogues français et anglais.
+
 # 1.4.20
 
 - Blocage de la lecture de fichiers hors du frontend compilé.
@@ -28,7 +83,7 @@
 - Ajout des formulaires d’édition et de suppression avec confirmation pour les occurrences.
 - Ajout des indicateurs de repas, sommeil, changes, tirage et temps sur le ventre.
 - Amélioration des tooltips, de la chronologie quotidienne et des unités mL/L.
-- Correction des libellés français, des unités d’heures en H et de la compilation JSX.
+- Correction des libellés français, des unités d’heures et de la compilation JSX.
 # 1.3.0
 
 - Ajout d’une occurrence « Lait non bu » qui retire du stock sans créer de repas.

@@ -4,16 +4,18 @@ import TimelineItem from "../components/TimelineItem";
 import { Icons } from "../components/Icons";
 import { colors } from "../utils/colors";
 import { toNoteTimeline } from "../utils/formatters";
+import { useLanguage } from "../utils/i18n";
 
 const COLLAPSED_COUNT = 5;
 
 export default function NotesTab({ notes, onEditEntry }) {
+  const { language, t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
-  const noteTimeline = toNoteTimeline(notes || []);
+  const noteTimeline = toNoteTimeline(notes || [], language);
 
   return (
     <div className="fade-in fade-in-1">
-      <SectionCard title="Notes" icon={<Icons.StickyNote />} color={colors.note}>
+      <SectionCard title={t("nav.notes")} icon={<Icons.StickyNote />} color={colors.note}>
         {noteTimeline.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column" }}>
             {(expanded ? noteTimeline : noteTimeline.slice(0, COLLAPSED_COUNT)).map((n, i, arr) => (
@@ -36,13 +38,13 @@ export default function NotesTab({ notes, onEditEntry }) {
                 className="expand-toggle"
                 onClick={() => setExpanded(!expanded)}
               >
-                {expanded ? "Réduire" : `Afficher ${noteTimeline.length - COLLAPSED_COUNT} de plus`}
+                {expanded ? t("common.collapse") : t("common.showMore", { count: noteTimeline.length - COLLAPSED_COUNT })}
               </button>
             )}
           </div>
         ) : (
           <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 40 }}>
-            Aucune note pour le moment — touchez + pour en ajouter une
+            {t("notes.noNotes")}
           </div>
         )}
       </SectionCard>

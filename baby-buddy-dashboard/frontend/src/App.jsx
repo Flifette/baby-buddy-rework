@@ -23,48 +23,50 @@ import PumpingForm from "./components/forms/PumpingForm";
 import MilkWasteForm from "./components/forms/MilkWasteForm";
 import TimerButton from "./components/TimerButton";
 import Modal from "./components/Modal";
+import { useLanguage } from "./utils/i18n";
+import { timerTypeFromName } from "./utils/timerAppearance";
 import "./styles.css";
 
 const TABS = [
-  { id: "overview", label: "Aperçu", icon: <Icons.Eye /> },
-  { id: "growth", label: "Croissance", icon: <Icons.TrendUp /> },
-  { id: "day", label: "Journée", icon: <Icons.Sun /> },
-  { id: "routine", label: "Routine", icon: <Icons.Calendar /> },
-  { id: "notes", label: "Notes", icon: <Icons.StickyNote /> },
+  { id: "overview", icon: <Icons.Eye /> },
+  { id: "growth", icon: <Icons.TrendUp /> },
+  { id: "day", icon: <Icons.Sun /> },
+  { id: "routine", icon: <Icons.Calendar /> },
+  { id: "notes", icon: <Icons.StickyNote /> },
 ];
 
 const ACTION_GROUPS = [
   {
-    label: "Suivi",
+    id: "tracking",
     actions: [
-      { id: "feeding", label: "Repas", icon: <Icons.Bottle />, color: colors.feeding },
-      { id: "pumping", label: "Tirage", icon: <Icons.Pump />, color: colors.pumping },
-      { id: "milkWaste", label: "Lait non bu", icon: <Icons.BottleOff />, color: colors.milkWaste },
-      { id: "sleep", label: "Sommeil", icon: <Icons.Moon />, color: colors.sleep },
-      { id: "diaper", label: "Changes", icon: <Icons.Droplet />, color: colors.diaper },
-      { id: "tummy", label: "Temps sur le ventre", icon: <Icons.BabyCrawl />, color: colors.tummy },
+      { id: "feeding", icon: <Icons.Bottle />, color: colors.feeding },
+      { id: "pumping", icon: <Icons.Pump />, color: colors.pumping },
+      { id: "milkWaste", icon: <Icons.BottleOff />, color: colors.milkWaste },
+      { id: "sleep", icon: <Icons.Moon />, color: colors.sleep },
+      { id: "diaper", icon: <Icons.Droplet />, color: colors.diaper },
+      { id: "tummy", icon: <Icons.BabyCrawl />, color: colors.tummy },
     ],
   },
   {
-    label: "Mesures",
+    id: "measurements",
     actions: [
-      { id: "temp", label: "Température", icon: <Icons.Temp />, color: colors.temp },
-      { id: "weight", label: "Poids", icon: <Icons.Weight />, color: colors.growth },
-      { id: "height", label: "Taille", icon: <Icons.Ruler />, color: colors.height },
+      { id: "temperature", modalType: "temp", icon: <Icons.Temp />, color: colors.temp },
+      { id: "weight", icon: <Icons.Weight />, color: colors.growth },
+      { id: "height", icon: <Icons.Ruler />, color: colors.height },
     ],
   },
   {
-    label: "Note",
+    id: "note",
     actions: [
-      { id: "note", label: "Note", icon: <Icons.StickyNote />, color: colors.note },
+      { id: "note", icon: <Icons.StickyNote />, color: colors.note },
     ],
   },
 ];
 
 const TIMER_TYPES = [
-      { id: "feeding", label: "Repas", icon: <Icons.Bottle />, color: colors.feeding },
-      { id: "sleep", label: "Sommeil", icon: <Icons.Moon />, color: colors.sleep },
-      { id: "tummy", label: "Temps sur le ventre", icon: <Icons.BabyCrawl />, color: colors.tummy },
+      { id: "feeding", icon: <Icons.Bottle />, color: colors.feeding },
+      { id: "sleep", icon: <Icons.Moon />, color: colors.sleep },
+      { id: "tummy", icon: <Icons.BabyCrawl />, color: colors.tummy },
 ];
 
 const TILE_DEFAULTS = {
@@ -92,15 +94,8 @@ function toLocalDatetime(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function timerNameToType(name) {
-  if (!name) return "feeding";
-  const n = name.toLowerCase();
-  if (n.includes("sleep")) return "sleep";
-  if (n.includes("tummy")) return "tummy";
-  return "feeding";
-}
-
 export default function App() {
+  const { language, t } = useLanguage();
   const [period, setPeriod] = useState("week");
   const data = useBabyData(period);
   const timer = useTimers(data.timers, data.child?.id);
@@ -121,7 +116,7 @@ export default function App() {
   }, [activeTab, period]);
   const [modal, setModal] = useState(null);
   const [showActions, setShowActions] = useState(false);
-  const [expandedGroup, setExpandedGroup] = useState("Track");
+  const [expandedGroup, setExpandedGroup] = useState("tracking");
   const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [editingTimerId, setEditingTimerId] = useState(null);
   const [tileVisibility, setTileVisibility] = useState(loadTileVisibility);
@@ -141,7 +136,7 @@ export default function App() {
     return (
       <div className="app-loading">
         <div className="loading-spinner" />
-        <span style={{ color: "var(--text-muted)", fontSize: 14 }}>Chargement…</span>
+        <span style={{ color: "var(--text-muted)", fontSize: 14 }}>{t("common.loading")}</span>
       </div>
     );
   }
@@ -152,6 +147,7 @@ export default function App() {
 }
 
 function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, setPeriod, modal, setModal, showActions, setShowActions, expandedGroup, setExpandedGroup, showTimerPicker, setShowTimerPicker, editingTimerId, setEditingTimerId, tileVisibility, setTileVisibility, showTileSettings, setShowTileSettings }) {
+  const { language, locale, setLanguage, t } = useLanguage();
   const data = { ...rawData };
   ["children", "feedings", "weeklyFeedings", "sleepEntries", "weeklySleep", "changes", "tummyTimes", "weeklyTummyTimes", "temperatures", "weights", "heights", "monthlyFeedings", "monthlySleep", "pumping", "milkWaste", "notes"].forEach((key) => {
     if (!Array.isArray(data[key])) data[key] = [];
@@ -177,8 +173,8 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
             <div className="baby-name-row">
               <h1 className="baby-name">{data.child?.first_name || "Baby"}</h1>
               {children.length >= 2 && (
-                <label className="child-picker-inline" title="Changer d’enfant">
-                  <select aria-label="Changer d’enfant" value={data.child?.id || ""} onChange={(event) => data.selectChild(Number(event.target.value))}>
+                <label className="child-picker-inline" title={t("child.change")}>
+                  <select aria-label={t("child.change")} value={data.child?.id || ""} onChange={(event) => data.selectChild(Number(event.target.value))}>
                     {children.map((child) => <option key={child.id} value={child.id}>{child.first_name}</option>)}
                   </select>
                   <span aria-hidden="true">⌄</span>
@@ -186,51 +182,72 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
               )}
             </div>
             {data.child?.birth_date && (
-              <span className="baby-age">{getAge(data.child.birth_date)}</span>
+              <span className="baby-age">{getAge(data.child.birth_date, language)}</span>
             )}
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {data.error && (
-            <span className="sync-error">Erreur de connexion</span>
+            <span className="sync-error">{t("common.connectionError")}</span>
           )}
           {data.lastSync && !data.error && (
             <span className="sync-time">
-              {data.lastSync.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {data.lastSync.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
-          <a className="refresh-btn" href="/lovelace/0" target="_top" rel="noreferrer" title="Tableau de bord Home Assistant">
+          <a className="refresh-btn" href="/lovelace/0" target="_top" rel="noreferrer" title={t("common.homeAssistant")}>
             <Icons.Home />
           </a>
-          <button className="refresh-btn" onClick={data.refetch} title="Actualiser">
+          <button className="refresh-btn" onClick={data.refetch} title={t("common.refresh")} aria-label={t("common.refresh")}>
             <Icons.Activity />
           </button>
-          <button className="refresh-btn" onClick={() => setShowTileSettings(true)} title="Réglages des tuiles" aria-label="Réglages des tuiles">
+          <button className="refresh-btn" onClick={() => setShowTileSettings(true)} title={t("settings.title")} aria-label={t("settings.title")}>
             <Icons.Settings />
           </button>
+          <label className="language-picker-inline" title={t("language.select")}>
+            <span className="language-code" aria-hidden="true">{t("language.code")}</span>
+            <span className="language-chevron" aria-hidden="true">⌄</span>
+            <select aria-label={t("language.select")} value={language} onChange={(event) => setLanguage(event.target.value)}>
+              <option value="fr">{t("language.french")}</option>
+              <option value="en">{t("language.english")}</option>
+            </select>
+          </label>
         </div>
       </header>
 
       {/* Active Timer Bars */}
-      {activeTimers.map((t) => (
-        <div key={t.id} className="timer-bar fade-in">
+      {activeTimers.map((timerEntry) => {
+        const timerType = timerTypeFromName(timerEntry.name);
+        const timerColor = colors[timerType] || colors.feeding;
+        return (
+        <div
+          key={timerEntry.id}
+          className="timer-bar fade-in"
+          style={{
+            "--timer-color": timerColor,
+            "--timer-background": `${timerColor}08`,
+            "--timer-border": `${timerColor}25`,
+            "--timer-input-background": `${timerColor}15`,
+            "--timer-input-border": `${timerColor}40`,
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className="timer-pulse" />
             <Icons.Timer />
             <span style={{ fontSize: 13, fontWeight: 500 }}>
-              {t.name}
+              {t(`activity.${timerEntry.name}`) === `activity.${timerEntry.name}` ? timerEntry.name : t(`activity.${timerEntry.name}`)}
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {editingTimerId === t.id ? (
+            {editingTimerId === timerEntry.id ? (
               <input
                 type="datetime-local"
                 className="timer-edit-input"
-                defaultValue={toLocalDatetime(t.start)}
+                defaultValue={toLocalDatetime(timerEntry.start)}
                 autoFocus
                 onBlur={(e) => {
                   if (e.target.value) {
-                    timer.editTimer(t.id, `${e.target.value}:00`);
+                    timer.editTimer(timerEntry.id, `${e.target.value}:00`);
                   }
                   setEditingTimerId(null);
                 }}
@@ -243,36 +260,36 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
               <span
                 className="timer-elapsed"
                 style={{ cursor: "pointer" }}
-                title="Modifier l’heure de début"
-                onClick={() => setEditingTimerId(t.id)}
+                title={t("common.editStart")}
+                onClick={() => setEditingTimerId(timerEntry.id)}
               >
-                {formatElapsed(timer.elapsedMap[t.id] || 0)}
+                {formatElapsed(timer.elapsedMap[timerEntry.id] || 0)}
               </span>
             )}
             <button
               className="timer-save-btn"
               onClick={async () => {
-                const stopped = await timer.stopTimer(t.id);
+                const stopped = await timer.stopTimer(timerEntry.id);
                 if (stopped) {
-                  setModal({ type: timerNameToType(stopped.name), timerId: stopped.id });
+                  setModal({ type: timerTypeFromName(stopped.name), timerId: stopped.id });
                 }
               }}
             >
-              Enregistrer
+              {t("common.save")}
             </button>
             <button
               className="timer-discard-btn"
-              onClick={() => timer.discardTimer(t.id)}
+              onClick={() => timer.discardTimer(timerEntry.id)}
             >
               <Icons.X />
             </button>
           </div>
         </div>
-      ))}
+      );})}
 
       {/* Global period selector (independent from the day timeline) */}
-      {activeTab !== "day" && <div className="period-selector fade-in" role="group" aria-label="Période d’affichage">
-        {PERIODS.map(([id, label]) => <button key={id} className={`period-btn${period === id ? " period-btn-active" : ""}`} onClick={() => setPeriod(id)}>{label}</button>)}
+      {activeTab !== "day" && <div className="period-selector fade-in" role="group" aria-label={t("period.label")}>
+        {PERIODS.map((id) => <button key={id} className={`period-btn${period === id ? " period-btn-active" : ""}`} onClick={() => setPeriod(id)}>{t(`period.${id}`)}</button>)}
       </div>}
 
       {/* Tab Navigation */}
@@ -284,7 +301,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.icon}
-            {tab.label}
+            {t(`nav.${tab.id}`)}
           </button>
         ))}
       </nav>
@@ -346,17 +363,17 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       </main>
 
       {showTileSettings && (
-        <Modal title="Réglages des tuiles" onClose={() => setShowTileSettings(false)}>
+        <Modal title={t("settings.title")} onClose={() => setShowTileSettings(false)}>
           {[
-            ["overview", "Aperçu", [["feedingSummary", "Résumé des repas"], ["sleepSummary", "Résumé du sommeil"], ["diaperSummary", "Résumé des changes"], ["pumpingSummary", "Résumé du tirage"], ["feedings", "Repas récents"], ["sleep", "Sommeil"], ["diapers", "Changes"], ["pumping", "Tirage de lait"], ["tummy", "Temps sur le ventre"]]],
-            ["growth", "Croissance", [["measurements", "Mesures récentes"], ["feedingSummary", "Résumé des repas"], ["milkWasteSummary", "Résumé du lait non bu"], ["sleepSummary", "Résumé du sommeil"], ["tummySummary", "Résumé du temps sur le ventre"], ["feedingChart", "Repas quotidiens"], ["sleepChart", "Sommeil quotidien"], ["tummyChart", "Temps sur le ventre quotidien"], ["weightChart", "Évolution du poids"], ["heightChart", "Évolution de la taille"], ["milkStock", "Stock de lait"]]],
-          ].map(([view, title, items]) => (
+            ["overview", ["feedingSummary", "sleepSummary", "diaperSummary", "pumpingSummary", "feedings", "sleep", "diapers", "pumping", "tummy"]],
+            ["growth", ["measurements", "feedingSummary", "milkWasteSummary", "sleepSummary", "tummySummary", "feedingChart", "sleepChart", "tummyChart", "weightChart", "heightChart", "milkStock"]],
+          ].map(([view, items]) => (
             <section key={view} className="tile-settings-section">
-              <h3>{title}</h3>
-              {items.map(([key, label]) => (
+              <h3>{t(`nav.${view}`)}</h3>
+              {items.map((key) => (
                 <label key={key} className="tile-setting-row">
                   <input type="checkbox" checked={tileVisibility[view][key] !== false} onChange={(event) => setTileVisibility((prev) => ({ ...prev, [view]: { ...prev[view], [key]: event.target.checked } }))} />
-                  <span>{label}</span>
+                  <span>{t(`settings.${view}.${key}`)}</span>
                 </label>
               ))}
             </section>
@@ -369,14 +386,14 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
         {showActions && (
           <div className="fab-menu fade-in">
             {ACTION_GROUPS.map((group) => {
-              const isOpen = expandedGroup === group.label;
+              const isOpen = expandedGroup === group.id;
               return (
-                <div key={group.label} className="fab-group">
+                <div key={group.id} className="fab-group">
                   <button
                     className={`fab-group-label${isOpen ? " fab-group-label-active" : ""}`}
-                    onClick={() => setExpandedGroup(isOpen ? null : group.label)}
+                    onClick={() => setExpandedGroup(isOpen ? null : group.id)}
                   >
-                    {group.label}
+                    {t(`activity.${group.id}`)}
                   </button>
                   {isOpen && (
                     <div className="fab-group-items">
@@ -385,7 +402,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
                           key={action.id}
                           className="fab-action"
                           onClick={() => {
-                            setModal({ type: action.id });
+                            setModal({ type: action.modalType || action.id });
                             setShowActions(false);
                           }}
                         >
@@ -395,7 +412,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
                           >
                             {action.icon}
                           </span>
-                          <span className="fab-action-label">{action.label}</span>
+                          <span className="fab-action-label">{t(`activity.${action.id}`)}</span>
                         </button>
                       ))}
                     </div>
@@ -407,28 +424,28 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
         )}
         {showTimerPicker && (
           <div className="fab-menu fade-in" style={{ right: 76 }}>
-            {TIMER_TYPES.map((t) => (
+            {TIMER_TYPES.map((timerType) => (
               <button
-                key={t.id}
+                key={timerType.id}
                 className="fab-action"
                 onClick={() => {
-                  timer.startTimer(t.id);
+                  timer.startTimer(timerType.id);
                   setShowTimerPicker(false);
                 }}
               >
                 <span
                   className="fab-action-icon"
-                  style={{ background: `${t.color}18`, color: t.color }}
+                  style={{ background: `${timerType.color}18`, color: timerType.color }}
                 >
-                  {t.icon}
+                  {timerType.icon}
                 </span>
-                <span className="fab-action-label">{t.label}</span>
+                <span className="fab-action-label">{t(`activity.${timerType.id}`)}</span>
               </button>
             ))}
           </div>
         )}
         <TimerButton
-          label="Timer"
+          label={t("activity.timer")}
           icon={<Icons.Timer />}
           color={colors.feeding}
           active={false}
@@ -440,7 +457,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
         <button
           className="fab-btn"
           style={{ background: showActions ? "var(--text-muted)" : colors.feeding }}
-          onClick={() => { setShowActions(!showActions); setShowTimerPicker(false); setExpandedGroup("Track"); }}
+          onClick={() => { setShowActions(!showActions); setShowTimerPicker(false); setExpandedGroup("tracking"); }}
         >
           <span style={{ transform: showActions ? "rotate(45deg)" : "none", transition: "transform 0.2s", display: "flex" }}>
             <Icons.Plus />
@@ -463,6 +480,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
           childId={data.child?.id}
           timerId={modal.timerId}
           entry={modal.entry}
+          sleepEntries={data.sleepEntries}
           onDone={handleFormDone}
           onClose={closeModal}
         />
