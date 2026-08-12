@@ -152,3 +152,23 @@ test("language selection and bilingual Home Assistant documentation stay publish
   assert.match(translationsEn, /baby_buddy_url:/);
   assert.match(translationsFr, /baby_buddy_url:/);
 });
+
+test("Baby Buddy requirements clearly distinguish the add-on from HAOS examples", async () => {
+  const readme = await read("README.md");
+  const readmeFr = await read("README.fr.md");
+  const addonReadme = await read("baby-buddy-dashboard/README.md");
+  const addonDocs = await read("baby-buddy-dashboard/DOCS.md");
+  const examples = await read("examples/home-assistant/README.md");
+  const addonConfig = await read("baby-buddy-dashboard/config.yaml");
+
+  assert.match(readme, /working Baby Buddy instance is required/);
+  assert.match(readme, /integration is optional for the Dashboard add-on/i);
+  assert.match(readmeFr, /instance Baby Buddy fonctionnelle est indispensable/);
+  assert.match(readmeFr, /intégration communautaire[\s\S]*facultative/);
+  assert.match(addonReadme, /existing Baby Buddy instance/);
+  assert.match(addonDocs, /does not replace Baby Buddy/);
+  assert.match(addonDocs, /ne remplace pas Baby Buddy/);
+  assert.match(examples, /require both a working Baby Buddy instance/);
+  assert.match(examples, /nécessitent une instance Baby Buddy fonctionnelle/);
+  assert.match(addonConfig, /version:\s*"1\.6\.0"/);
+});

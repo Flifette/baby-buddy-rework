@@ -1,5 +1,11 @@
 # Changelog
 
+# 1.6.0
+
+- Clarification bilingue des prérequis : le Dashboard nécessite une instance Baby Buddy existante, mais pas l’intégration Home Assistant Baby Buddy séparée.
+- Distinction explicite avec les exemples de cartes, helpers et scripts HAOS, qui nécessitent à la fois Baby Buddy et l’intégration communautaire Home Assistant.
+- Première publication regroupée depuis l’ouverture publique du dépôt et la mise en place des branches protégées.
+
 # 1.5.9
 
 - Harmonisation du symbole français des heures en `h` minuscule dans les tuiles, listes, graphiques et durées relatives.

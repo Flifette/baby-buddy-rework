@@ -2,6 +2,10 @@
 
 Ce document présente une base générique pour créer dans Home Assistant des formulaires Lovelace reliés à Baby Buddy, indépendamment de l’add-on Baby Buddy Dashboard Rework. Les cartes peuvent être insérées dans une vue existante, un tableau de bord dédié ou des popups.
 
+> **Important — Français :** ces exemples ne remplacent ni Baby Buddy ni son intégration Home Assistant. Ils nécessitent une instance Baby Buddy fonctionnelle **et** l’intégration communautaire Home Assistant Baby Buddy.
+>
+> **Important — English:** these examples replace neither Baby Buddy nor its Home Assistant integration. They require both a working Baby Buddy instance **and** the community Home Assistant Baby Buddy integration.
+
 La configuration permet d’enregistrer les repas, tirages, changes, sommeils, temps sur le ventre, mesures, notes et activités chronométrées. La liste des enfants est récupérée automatiquement depuis l’API Baby Buddy : aucun nom d’enfant n’est codé en dur.
 
 > Les adresses, noms et jetons sont uniquement des exemples. Ne publiez jamais un jeton API réel. Testez d’abord chaque action depuis **Outils de développement > Actions**.
