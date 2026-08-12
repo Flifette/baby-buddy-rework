@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { api } from "../../api";
-import Modal, { FormField, FormInput, FormButton, DeleteIconButton } from "../Modal";
+import Modal, { FormField, FormInput, FormButton, FormError, DeleteIconButton } from "../Modal";
 import { colors } from "../../utils/colors";
 import { useUnits } from "../../utils/units";
+import { useLanguage } from "../../utils/i18n";
+import { apiErrorTranslationKey } from "../../utils/formValidation";
 
 function toLocalDate(date) {
   const d = new Date(date);
@@ -12,15 +14,17 @@ function toLocalDate(date) {
 
 export default function HeightForm({ childId, entry, onDone, onClose }) {
   const units = useUnits();
+  const { t } = useLanguage();
   const isEdit = !!entry;
   const [height, setHeight] = useState(entry?.height ? String(entry.height) : "");
   const [date, setDate] = useState(entry?.date ? toLocalDate(entry.date) : toLocalDate(new Date()));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteHeight(entry.id); onDone(); } catch { setSaving(false); } };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!height) return;
+    setError("");
     setSaving(true);
     try {
       const data = {
@@ -34,37 +38,39 @@ export default function HeightForm({ childId, entry, onDone, onClose }) {
         await api.createHeight(data);
       }
       onDone();
-    } catch {
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={isEdit ? "Modifier la taille" : "Ajouter une taille"} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.height.edit" : "form.height.add")} onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <FormField label={`Taille (${units.length})`}>
+        <FormField label={`${t("activity.height")} (${units.length})`}>
           <FormInput
             type="number"
             value={height}
-            onChange={(e) => setHeight(e.target.value)}
+            onChange={(e) => { setHeight(e.target.value); setError(""); }}
             placeholder="50.0"
-            min="0"
+            min="0.1"
             max="200"
             step="0.1"
             autoFocus
             required
           />
         </FormField>
-        <FormField label="Date">
+        <FormField label={t("common.date")}>
           <FormInput
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => { setDate(e.target.value); setError(""); }}
             required
           />
         </FormField>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ flex: 1 }}><FormButton color={colors.height} disabled={saving || !height}>
-          {saving ? "Enregistrement…" : isEdit ? "Modifier la taille" : "Enregistrer la taille"}
+        <FormError>{error}</FormError>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}><div style={{ flex: 1 }}><FormButton color={colors.height} disabled={saving}>
+          {saving ? t("common.saving") : t(isEdit ? "form.height.edit" : "form.height.save")}
         </FormButton></div>{isEdit && <DeleteIconButton color={colors.height} disabled={saving} onConfirm={remove} />}</div>
       </form>
     </Modal>

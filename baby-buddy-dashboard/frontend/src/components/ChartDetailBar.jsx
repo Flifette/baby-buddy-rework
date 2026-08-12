@@ -1,4 +1,7 @@
-export default function ChartDetailBar({ label, value, unit, color, onViewEntries, onDismiss, actionLabel = "Voir les occurrences" }) {
+import { useLanguage } from "../utils/i18n";
+
+export default function ChartDetailBar({ label, value, unit, color, onViewEntries, onDismiss, actionLabel }) {
+  const { t } = useLanguage();
   if (!label) return null;
   return (
     <div
@@ -34,7 +37,7 @@ export default function ChartDetailBar({ label, value, unit, color, onViewEntrie
             whiteSpace: "nowrap",
           }}
         >
-          {actionLabel}
+          {actionLabel || t("chart.viewEntries")}
         </button>}
         <button
           onClick={onDismiss}
@@ -46,7 +49,7 @@ export default function ChartDetailBar({ label, value, unit, color, onViewEntrie
             border: "none",
             cursor: "pointer",
           }}
-          aria-label="Fermer"
+          aria-label={t("common.close")}
         >
           ✕
         </button>

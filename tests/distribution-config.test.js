@@ -133,3 +133,22 @@ test("both readmes provide the one-click Home Assistant repository link", async 
     assert.ok(document.includes(repositoryLink));
   }
 });
+
+test("language selection and bilingual Home Assistant documentation stay published", async () => {
+  const readme = await read("README.md");
+  const readmeFr = await read("README.fr.md");
+  const addonReadme = await read("baby-buddy-dashboard/README.md");
+  const addonDocs = await read("baby-buddy-dashboard/DOCS.md");
+  const translationsEn = await read("baby-buddy-dashboard/translations/en.yaml");
+  const translationsFr = await read("baby-buddy-dashboard/translations/fr.yaml");
+
+  assert.match(readme, /Language selection/);
+  assert.match(readmeFr, /Choix de la langue/);
+  assert.match(addonReadme, /FR \/ EN/);
+  assert.match(addonDocs, /## English/);
+  assert.match(addonDocs, /## Français/);
+  assert.match(addonDocs, /stored locally in the browser/);
+  assert.match(addonDocs, /mémorisée localement dans le navigateur/);
+  assert.match(translationsEn, /baby_buddy_url:/);
+  assert.match(translationsFr, /baby_buddy_url:/);
+});

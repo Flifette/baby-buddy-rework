@@ -1,26 +1,44 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { LOCALES, localeFor, normalizeLanguage, translate } from "./i18nCore.js";
+export { LANGUAGES, LOCALES, TRANSLATIONS, localeFor, normalizeLanguage, translate } from "./i18nCore.js";
 
-const LanguageContext = createContext({ language: "fr", setLanguage: () => {}, t: (key) => key });
-
-const DICTIONARY = {
-  fr: {
-    overview: "Vue d'ensemble", growth: "Croissance", day: "Journée", routine: "Routine", notes: "Notes",
-    refresh: "Actualiser", homeAssistant: "Tableau de bord Home Assistant", child: "Enfant",
-    dayPeriod: "Jour", weekPeriod: "Semaine", monthPeriod: "30 jours", halfyearPeriod: "6 mois", yearPeriod: "1 an", allPeriod: "Total",
-    track: "Suivi", measurements: "Mesures", note: "Note", feeding: "Repas", pumping: "Tirage", sleep: "Sommeil", diaper: "Changes", tummy: "Temps sur le ventre", temperature: "Température", weight: "Poids", height: "Taille", save: "Enregistrer", timer: "Chronomètre",
-  },
-  en: {
-    overview: "Overview", growth: "Growth", day: "Day", routine: "Routine", notes: "Notes",
-    refresh: "Refresh", homeAssistant: "Home Assistant dashboard", child: "Child",
-    dayPeriod: "Day", weekPeriod: "Week", monthPeriod: "30 days", halfyearPeriod: "6 months", yearPeriod: "1 year", allPeriod: "Total",
-    track: "Tracking", measurements: "Measurements", note: "Note", feeding: "Feedings", pumping: "Pumping", sleep: "Sleep", diaper: "Diapers", tummy: "Tummy time", temperature: "Temperature", weight: "Weight", height: "Height", save: "Save", timer: "Timer",
-  },
-};
+const LanguageContext = createContext({
+  language: "fr",
+  locale: LOCALES.fr,
+  setLanguage: () => {},
+  t: (key, params) => translate(key, params, "fr"),
+});
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState(() => localStorage.getItem("baby-buddy-language") || "fr");
-  const changeLanguage = (value) => { setLanguage(value); localStorage.setItem("baby-buddy-language", value); };
-  const value = useMemo(() => ({ language, setLanguage: changeLanguage, t: (key) => DICTIONARY[language]?.[key] || DICTIONARY.fr[key] || key }), [language]);
+  const [language, setLanguageState] = useState(() => {
+    try {
+      return normalizeLanguage(localStorage.getItem("baby-buddy-language"));
+    } catch {
+      return "fr";
+    }
+  });
+
+  const setLanguage = (value) => {
+    const normalized = normalizeLanguage(value);
+    setLanguageState(normalized);
+    try {
+      localStorage.setItem("baby-buddy-language", normalized);
+    } catch {
+      // Storage can be unavailable in hardened/private browser contexts.
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  const value = useMemo(() => ({
+    language,
+    locale: localeFor(language),
+    setLanguage,
+    t: (key, params) => translate(key, params, language),
+  }), [language]);
+
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 

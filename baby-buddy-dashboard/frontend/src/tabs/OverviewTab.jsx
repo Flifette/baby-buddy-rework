@@ -30,23 +30,25 @@ import {
   applyMilkWasteToFeedings,
 } from "../utils/formatters";
 import { useUnits, formatVolume } from "../utils/units";
+import { useLanguage } from "../utils/i18n";
 
 const COLLAPSED_COUNT = 2;
 
 export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRaw, sleepEntries, weeklySleep, changes, tummyTimes, weeklyTummyTimes, pumping = [], milkWaste = [], period = "week", onEditEntry, visibleTiles = {} }) {
   const units = useUnits();
+  const { language, locale, t } = useLanguage();
   const [expanded, setExpanded] = useState({});
   const [dayModal, setDayModal] = useState(null);
   const [selectedBar, setSelectedBar] = useState(null);
   const toggle = (key) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const netFeedings = applyMilkWasteToFeedings(feedings, milkWaste);
-  const feedingTimeline = toFeedingTimeline(netFeedings, formatVolume);
-  const diaperTimeline = toDiaperTimeline(changes);
-  const sleepBlocks = toSleepBlocks(sleepEntries);
-  const weeklyFeedings = aggregateByPeriod(netFeedings, "feeding", period);
-  const sleepByDay = aggregateByPeriod(sleepEntries, "sleep", period);
-  const tummyByDay = aggregateByPeriod(tummyTimes, "tummy", period);
+  const feedingTimeline = toFeedingTimeline(netFeedings, formatVolume, language);
+  const diaperTimeline = toDiaperTimeline(changes, language);
+  const sleepBlocks = toSleepBlocks(sleepEntries, language);
+  const weeklyFeedings = aggregateByPeriod(netFeedings, "feeding", period, [], language);
+  const sleepByDay = aggregateByPeriod(sleepEntries, "sleep", period, [], language);
+  const tummyByDay = aggregateByPeriod(tummyTimes, "tummy", period, [], language);
 
   const totalMilkWaste = milkWaste.reduce((s, entry) => s + Number(entry.amount || 0), 0);
   const totalFeeding = netFeedings.reduce((s, f) => s + Number(f.amount || 0), 0);
@@ -61,11 +63,11 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
     .map((p) => {
       const value = p.end || p.start;
       const date = value ? new Date(value) : null;
-      const side = p.notes?.match(/^Sein\s*:\s*([^—]+)/)?.[1]?.trim();
+      const side = p.notes?.match(/^(?:Sein|Breast)\s*:\s*([^—]+)/i)?.[1]?.trim();
       return { entry: p,
-        time: date ? date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—",
-        label: `${formatVolume(Number(p.amount || 0))} Tirage${side ? ` · ${side}` : ""}`,
-        detail: date ? date.toLocaleDateString("fr-FR") : "",
+        time: date ? date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "—",
+        label: `${formatVolume(Number(p.amount || 0))} ${t("activity.pumping")}${side ? ` · ${side}` : ""}`,
+        detail: date ? date.toLocaleDateString(locale) : "",
       };
     });
   const totalSleep = sleepEntries.reduce(
@@ -119,36 +121,36 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
         {visibleTiles.feedingSummary !== false ? (<div className="fade-in fade-in-1">
           <StatCard
             icon={<Icons.Bottle />}
-            label="Repas"
+            label={t("activity.feeding")}
             value={hasFeedingVolume ? formatVolume(totalFeeding) : `${feedings.length}`}
-            sub={`${feedings.length} repas sur cette période`}
+            sub={t("overview.feedingsCount", { count: feedings.length })}
             color={colors.feeding}
           />
          </div>) : null}
          {visibleTiles.sleepSummary !== false ? (<div className="fade-in fade-in-2">
           <StatCard
             icon={<Icons.Moon />}
-            label="Sommeil"
-            value={`${totalSleep.toFixed(1)} H`}
-            sub="Sur cette période"
+            label={t("activity.sleep")}
+            value={`${totalSleep.toFixed(1)} ${t("unit.hourShort")}`}
+            sub={t("common.thisPeriod")}
             color={colors.sleep}
           />
         </div>) : null}
         {visibleTiles.diaperSummary !== false ? (<div className="fade-in fade-in-3">
           <StatCard
             icon={<Icons.Droplet />}
-            label="Changes"
+            label={t("activity.diaper")}
             value={totalDiapers}
-            sub={`${wetCount} humides · ${solidCount} solides · ${bothCount} mixtes`}
+            sub={t("overview.wetSolidMixed", { wet: wetCount, solid: solidCount, mixed: bothCount })}
             color={colors.diaper}
           />
         </div>) : null}
         {visibleTiles.pumpingSummary !== false ? (<div className="fade-in fade-in-4">
           <StatCard
             icon={<Icons.Pump />}
-            label="Tirage de lait"
+            label={t("overview.pumping")}
             value={formatVolume(totalPumping)}
-            sub={`${pumping.length} tirages sur cette période`}
+            sub={t("overview.pumpingCount", { count: pumping.length })}
             color={colors.pumping}
           />
         </div>) : null}
@@ -164,7 +166,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
       >
         {/* Feeding Timeline */}
         {visibleTiles.feedings !== false ? (<div className="fade-in fade-in-3">
-          <SectionCard title="Repas récents" icon={<Icons.Bottle />} color={colors.feeding}>
+          <SectionCard title={t("overview.recentFeedings")} icon={<Icons.Bottle />} color={colors.feeding}>
             {feedingTimeline.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {(expanded.feedings ? feedingTimeline : feedingTimeline.slice(0, COLLAPSED_COUNT)).map((f, i, arr) => (
@@ -180,13 +182,13 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                 ))}
                 {feedingTimeline.length > COLLAPSED_COUNT && (
                   <button className="expand-toggle" onClick={() => toggle("feedings")}>
-                    {expanded.feedings ? "Réduire" : `Afficher ${feedingTimeline.length - COLLAPSED_COUNT} de plus`}
+                    {expanded.feedings ? t("common.collapse") : t("common.showMore", { count: feedingTimeline.length - COLLAPSED_COUNT })}
                   </button>
                 )}
               </div>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 20 }}>
-                Aucun repas enregistré sur cette période
+                {t("overview.noFeedings")}
               </div>
             )}
             {period !== "day" && weeklyFeedings.some((d) => d.amount > 0) && (
@@ -219,15 +221,15 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
 
         {/* Sleep */}
         {visibleTiles.sleep !== false ? (<div className="fade-in fade-in-4">
-          <SectionCard title="Sommeil" icon={<Icons.Moon />} color={colors.sleep}>
+          <SectionCard title={t("activity.sleep")} icon={<Icons.Moon />} color={colors.sleep}>
             {sleepBlocks.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {(expanded.sleep ? sleepBlocks : sleepBlocks.slice(0, COLLAPSED_COUNT)).map((s, i, arr) => (
                   <div key={i} className="entry-clickable" onClick={() => onEditEntry?.("sleep", s.entry)}>
                     <TimelineItem
                       time={`${s.start}–${s.end}`}
-                      label={`${s.duration.toFixed(1)} H${s.nap ? " · Sieste" : ""}`}
-                      detail={`${s.start} à ${s.end}`}
+                      label={`${s.duration.toFixed(1)} ${t("unit.hourShort")}${s.nap ? ` · ${t("overview.nap")}` : ""}`}
+                      detail={`${s.start} ${t("common.at")} ${s.end}`}
                       color={colors.sleep}
                       isLast={i === arr.length - 1}
                     />
@@ -235,13 +237,13 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                 ))}
                 {sleepBlocks.length > COLLAPSED_COUNT && (
                   <button className="expand-toggle" onClick={() => toggle("sleep")}>
-                    {expanded.sleep ? "Réduire" : `Afficher ${sleepBlocks.length - COLLAPSED_COUNT} de plus`}
+                    {expanded.sleep ? t("common.collapse") : t("common.showMore", { count: sleepBlocks.length - COLLAPSED_COUNT })}
                   </button>
                 )}
               </div>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 20 }}>
-                Aucun sommeil enregistré sur cette période
+                {t("overview.noSleep")}
               </div>
             )}
             {period !== "day" && sleepByDay.some((d) => d.hours > 0) && (
@@ -261,7 +263,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                   <ChartDetailBar
                     label={selectedBar.label}
                     value={selectedBar.value}
-                    unit="H"
+                    unit={t("unit.hourShort")}
                     color={colors.sleep}
                     onViewEntries={() => openDayModal(selectedBar.label, selectedBar.dateKey, "sleep")}
                     onDismiss={() => setSelectedBar(null)}
@@ -274,7 +276,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
 
         {/* Diapers */}
         {visibleTiles.diapers !== false ? (<div className="fade-in fade-in-5">
-          <SectionCard title="Changes" icon={<Icons.Droplet />} color={colors.diaper}>
+          <SectionCard title={t("activity.diaper")} icon={<Icons.Droplet />} color={colors.diaper}>
             {diaperTimeline.length > 0 ? (
               <>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -303,7 +305,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                   ))}
                   {diaperTimeline.length > COLLAPSED_COUNT && (
                     <button className="expand-toggle" onClick={() => toggle("diapers")}>
-                      {expanded.diapers ? "Réduire" : `Afficher ${diaperTimeline.length - COLLAPSED_COUNT} de plus`}
+                      {expanded.diapers ? t("common.collapse") : t("common.showMore", { count: diaperTimeline.length - COLLAPSED_COUNT })}
                     </button>
                   )}
                 </div>
@@ -320,28 +322,28 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                 >
                   <div style={{ flex: 1, textAlign: "center" }}>
                     <div style={{ fontSize: 20, fontWeight: 700, color: "#3B82F6" }}>{wetCount}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Humides</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.wet")}</div>
                   </div>
                   <div style={{ width: 1, background: "var(--border)" }} />
                   <div style={{ flex: 1, textAlign: "center" }}>
                     <div style={{ fontSize: 20, fontWeight: 700, color: "#D97706" }}>{solidCount}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Solides</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.solid")}</div>
                   </div>
                   <div style={{ width: 1, background: "var(--border)" }} />
                   <div style={{ flex: 1, textAlign: "center" }}>
                     <div style={{ fontSize: 20, fontWeight: 700, color: "#8B5CF6" }}>{bothCount}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Mixtes</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.mixed")}</div>
                   </div>
                   <div style={{ width: 1, background: "var(--border)" }} />
                   <div style={{ flex: 1, textAlign: "center" }}>
                     <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>{totalDiapers}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Total</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.total")}</div>
                   </div>
                 </div>
               </>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 20 }}>
-                Aucun change enregistré sur cette période
+                {t("overview.noDiapers")}
               </div>
             )}
           </SectionCard>
@@ -349,7 +351,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
 
         {/* Pumping */}
         {visibleTiles.pumping !== false ? (<div className="fade-in fade-in-6">
-          <SectionCard title="Tirage de lait" icon={<Icons.Pump />} color={colors.pumping}>
+          <SectionCard title={t("overview.pumping")} icon={<Icons.Pump />} color={colors.pumping}>
             {pumpingTimeline.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {(expanded.pumping ? pumpingTimeline : pumpingTimeline.slice(0, COLLAPSED_COUNT)).map((p, i, arr) => (
@@ -357,22 +359,22 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                 ))}
                 {pumpingTimeline.length > COLLAPSED_COUNT && (
                   <button className="expand-toggle" onClick={() => toggle("pumping")}>
-                    {expanded.pumping ? "Réduire" : `Afficher ${pumpingTimeline.length - COLLAPSED_COUNT} de plus`}
+                    {expanded.pumping ? t("common.collapse") : t("common.showMore", { count: pumpingTimeline.length - COLLAPSED_COUNT })}
                   </button>
                 )}
                 <div style={{ marginTop: 16, display: "flex", gap: 12, padding: "12px 16px", borderRadius: 12, background: "var(--bg)", border: "1px solid var(--border)" }}>
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.pumping }}>{formatVolume(totalPumping)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Tiré</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.pumping }}>{formatVolume(totalPumping)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.pumped")}</div></div>
                   <div style={{ width: 1, background: "var(--border)" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.feeding }}>{formatVolume(totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Lait maternel au biberon</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.feeding }}>{formatVolume(totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.breastMilkBottle")}</div></div>
                   <div style={{ width: 1, background: "var(--border)" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.milkWaste }}>{formatVolume(totalMilkWaste)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Non bu</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.milkWaste }}>{formatVolume(totalMilkWaste)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.notConsumed")}</div></div>
                   <div style={{ width: 1, background: "var(--border)" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.growth }}>{formatVolume(totalPumping - totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>Stock</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.growth }}>{formatVolume(totalPumping - totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.estimatedStock")}</div></div>
                 </div>
               </div>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 20 }}>
-                Aucun tirage enregistré sur cette période
+                {t("overview.noPumping")}
               </div>
             )}
           </SectionCard>
@@ -380,7 +382,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
 
         {/* Tummy Time (masqué) */}
         {visibleTiles.tummy === true ? (<div className="fade-in fade-in-6">
-          <SectionCard title="Temps sur le ventre" icon={<Icons.BabyCrawl />} color={colors.tummy}>
+          <SectionCard title={t("activity.tummy")} icon={<Icons.BabyCrawl />} color={colors.tummy}>
             {tummyByDay.some((d) => d.minutes > 0) ? (
               <>
                 <div style={{ height: 140 }}>
@@ -418,16 +420,16 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                   >
                     <Icons.TrendUp />
                     <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                      Moyenne{" "}
-                      <strong style={{ color: colors.tummy }}>{Math.round(avgTummy)} min</strong>{" "}
-                      par séance
+                      {t("growth.tummyAverage")}{" "}
+                      <strong style={{ color: colors.tummy }}>{Math.round(avgTummy)} {t("unit.minuteShort")}</strong>{" "}
+                      {t("common.perSession")}
                     </span>
                   </div>
                 )}
               </>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: 13, textAlign: "center", padding: 20 }}>
-                Aucun temps sur le ventre enregistré sur cette période
+                {t("overview.noTummy")}
               </div>
             )}
           </SectionCard>
