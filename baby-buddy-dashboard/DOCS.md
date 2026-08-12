@@ -4,6 +4,12 @@
 
 ## English
 
+### Requirements
+
+Baby Buddy Dashboard Rework does not replace Baby Buddy. Before installing this add-on, you need a working Baby Buddy instance reachable from Home Assistant, together with its URL and an API key.
+
+The separate community Home Assistant Baby Buddy integration is **not required** for this Dashboard add-on, which communicates directly with the Baby Buddy API. It is required only if you also want to use the example Lovelace cards, helpers, and HAOS scripts provided in the repository.
+
 ### Connection
 
 - **Baby Buddy URL**: full URL of the instance, reachable from Home Assistant.
@@ -39,6 +45,12 @@ Include the add-on data in your Home Assistant backups. Never publish your API k
 ---
 
 ## Français
+
+### Prérequis
+
+Baby Buddy Dashboard Rework ne remplace pas Baby Buddy. Avant d’installer cet add-on, vous devez disposer d’une instance Baby Buddy fonctionnelle et joignable depuis Home Assistant, ainsi que de son URL et d’une clé API.
+
+L’intégration communautaire Home Assistant Baby Buddy séparée n’est **pas obligatoire** pour cet add-on Dashboard, qui communique directement avec l’API Baby Buddy. Elle devient obligatoire uniquement si vous souhaitez également utiliser les exemples de cartes Lovelace, helpers et scripts HAOS fournis dans le dépôt.
 
 ### Connexion
 
