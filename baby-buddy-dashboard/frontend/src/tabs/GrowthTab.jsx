@@ -11,6 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
+  ReferenceDot,
 } from "recharts";
 import SectionCard from "../components/SectionCard";
 import MilkStock from "../components/MilkStock";
@@ -52,7 +53,16 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
   // empty daily points, which keeps Recharts responsive on long histories.
   const chartDays = periodDays || null;
   const feedingSeries = period === "day"
-    ? netPeriodFeedings.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: formatHour(entry.start), timestamp: new Date(entry.start).getTime(), amount: measurableFeedingAmount(entry), directCount: isDirectBreastfeeding(entry) ? 1 : 0, entry: entry._originalEntry || entry }))
+    ? netPeriodFeedings.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => {
+      const directBreastfeeding = isDirectBreastfeeding(entry);
+      return {
+        date: formatHour(entry.start),
+        timestamp: new Date(entry.start).getTime(),
+        amount: directBreastfeeding ? null : measurableFeedingAmount(entry),
+        directCount: directBreastfeeding ? 1 : null,
+        entry: entry._originalEntry || entry,
+      };
+    })
     : dailyFeedingGrowthTotals(netPeriodFeedings, chartDays, language);
   const sleepSeries = period === "day"
     ? periodSleep.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: formatHour(entry.start), timestamp: new Date(entry.start).getTime(), hours: parseDuration(entry.duration), entry }))
@@ -339,10 +349,21 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                       <CartesianGrid strokeDasharray="3 3" stroke="#252836" vertical={false} />
                       <XAxis dataKey={period === "day" ? "timestamp" : "date"} type={period === "day" ? "number" : "category"} scale={period === "day" ? "time" : "auto"} domain={period === "day" ? dayDomain : undefined} tickFormatter={period === "day" ? formatHour : undefined} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                       <YAxis yAxisId="volume" hide={!hasFeedingVolume} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} />
-                      <YAxis yAxisId="direct" hide={directBreastfeedingCount === 0} orientation="right" allowDecimals={false} tick={{ fontSize: 11, fill: colors.pumping }} axisLine={false} tickLine={false} />
+                      <YAxis yAxisId="direct" hide={directBreastfeedingCount === 0} orientation="right" allowDecimals={false} tick={{ fontSize: 11, fill: period === "day" ? colors.feeding : colors.pumping }} axisLine={false} tickLine={false} />
                       <Tooltip content={<CustomTooltip labelFormatter={period === "day" ? formatHour : undefined} />} />
                       <Legend verticalAlign="top" height={24} wrapperStyle={{ fontSize: 11 }} />
-                      {hasFeedingVolume ? <Area
+                      {hasFeedingVolume ? (period === "day" ? <Line
+                        dataKey="amount"
+                        name={t("chart.amount")}
+                        yAxisId="volume"
+                        stroke={colors.feeding}
+                        strokeOpacity={0}
+                        strokeWidth={1}
+                        legendType="circle"
+                        dot={false}
+                        activeDot={false}
+                        connectNulls={false}
+                      /> : <Area
                         type="monotone"
                         dataKey="amount"
                         name={t("chart.amount")}
@@ -350,22 +371,42 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                         stroke={colors.feeding}
                         strokeWidth={2}
                         fill={`${colors.feeding}30`}
-                        dot={period === "day" ? { r: 4, fill: colors.feeding } : false}
+                        dot={false}
                         activeDot={{ r: 4, fill: colors.feeding, cursor: "pointer" }}
                         cursor="pointer"
-                      /> : null}
+                      />) : null}
                       {directBreastfeedingCount > 0 ? <Line
                         type="monotone"
                         dataKey="directCount"
                         yAxisId="direct"
                         name={t("chart.directBreastfeedings")}
-                        stroke={colors.pumping}
-                        strokeWidth={2}
-                        strokeDasharray="4 3"
-                        dot={{ r: 3, fill: colors.pumping }}
-                        activeDot={{ r: 5, fill: colors.pumping, cursor: "pointer" }}
+                        stroke={period === "day" ? colors.feeding : colors.pumping}
+                        strokeOpacity={period === "day" ? 0 : 1}
+                        strokeWidth={period === "day" ? 1 : 2}
+                        strokeDasharray={period === "day" ? undefined : "4 3"}
+                        legendType={period === "day" ? "circle" : "line"}
+                        dot={period === "day" ? false : { r: 3, fill: colors.pumping, stroke: colors.pumping }}
+                        activeDot={period === "day" ? false : { r: 5, fill: colors.pumping, stroke: colors.pumping, cursor: "pointer" }}
+                        connectNulls={false}
                         cursor="pointer"
                       /> : null}
+                      {period === "day" ? feedingSeries.map((point) => {
+                        const dataKey = point.directCount > 0 ? "directCount" : "amount";
+                        const value = point[dataKey];
+                        if (!(value > 0)) return null;
+                        return <ReferenceDot
+                          key={`${dataKey}-${point.timestamp}-${point.entry?.id ?? "entry"}`}
+                          x={point.timestamp}
+                          y={value}
+                          yAxisId={dataKey === "directCount" ? "direct" : "volume"}
+                          r={4}
+                          fill={colors.feeding}
+                          stroke={colors.feeding}
+                          isFront
+                          cursor="pointer"
+                          onClick={() => setSelectedBar({ type: "feeding", label: formatHour(point.timestamp), value, entry: point.entry, dataKey })}
+                        />;
+                      }) : null}
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -374,7 +415,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     label={selectedBar.label}
                     value={selectedBar.value}
                     unit={selectedBar.dataKey === "directCount" ? t("growth.directBreastfeedingUnit") : units.volume}
-                    color={selectedBar.dataKey === "directCount" ? colors.pumping : colors.feeding}
+                    color={selectedBar.dataKey === "directCount" && period !== "day" ? colors.pumping : colors.feeding}
                     onViewEntries={() => {
                       if (period === "day" && selectedBar.entry) onEditEntry?.("feeding", selectedBar.entry);
                       else openDayModal(selectedBar.label, selectedBar.dateKey, "feeding");
