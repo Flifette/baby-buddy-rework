@@ -20,6 +20,7 @@ import { colors } from "../utils/colors";
 import { useUnits } from "../utils/units";
 import { toGrowthSeries, formatGrowthTick, dailyFeedingTotals, dailySleepTotals, dailyTummyTotals, getEntriesForDateKey, parseDuration, applyMilkWasteToFeedings } from "../utils/formatters";
 import { useLanguage } from "../utils/i18n";
+import { measurableFeedingAmount } from "../utils/feedings";
 
 const hourLabel = (value, locale) => new Date(value).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
@@ -72,7 +73,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
     ? (sleepDays.reduce((s, d) => s + d.hours, 0) / sleepDays.length).toFixed(1)
     : 0;
   const totalFeeding = netPeriodFeedings.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const hasFeedingVolume = periodFeedings.some((item) => Number(item.amount || 0) > 0);
+  const hasFeedingVolume = periodFeedings.some((item) => measurableFeedingAmount(item) > 0);
   const totalSleep = sleepSeries.reduce((sum, item) => sum + Number(item.hours || 0), 0).toFixed(1);
   const tummyDays = tummySeries.filter((item) => item.minutes > 0);
   const avgTummy = tummyDays.length ? Math.round(tummyDays.reduce((sum, item) => sum + item.minutes, 0) / tummyDays.length) : 0;

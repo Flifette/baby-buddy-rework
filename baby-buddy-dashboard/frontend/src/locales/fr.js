@@ -207,6 +207,7 @@ export default {
   "form.feeding.type": "Type de repas",
   "form.feeding.method": "Méthode",
   "form.feeding.timerHint": "Les heures de début et de fin du minuteur seront utilisées pour ce repas.",
+  "form.feeding.directBreastfeedingHint": "La quantité n’est pas demandée pour un allaitement au sein et n’est pas déduite du stock.",
   "form.feeding.save": "Enregistrer le repas",
   "form.feeding.editAction": "Modifier le repas",
   "form.sleep.add": "Ajouter un sommeil",

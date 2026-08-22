@@ -31,6 +31,7 @@ import {
 } from "../utils/formatters";
 import { useUnits, formatVolume } from "../utils/units";
 import { useLanguage } from "../utils/i18n";
+import { measurableFeedingAmount } from "../utils/feedings";
 
 const COLLAPSED_COUNT = 2;
 
@@ -52,7 +53,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
 
   const totalMilkWaste = milkWaste.reduce((s, entry) => s + Number(entry.amount || 0), 0);
   const totalFeeding = netFeedings.reduce((s, f) => s + Number(f.amount || 0), 0);
-  const hasFeedingVolume = feedings.some((f) => Number(f.amount || 0) > 0);
+  const hasFeedingVolume = feedings.some((f) => measurableFeedingAmount(f) > 0);
   const totalPumping = pumping.reduce((s, p) => s + Number(p.amount || 0), 0);
   const totalPumpingConsumed = feedings
     .filter((f) => f.type === "breast milk" && f.method === "bottle")

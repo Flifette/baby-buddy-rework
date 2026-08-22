@@ -5,6 +5,7 @@ import { colors } from "../../utils/colors";
 import { useUnits } from "../../utils/units";
 import { useLanguage } from "../../utils/i18n";
 import { apiErrorTranslationKey } from "../../utils/formValidation";
+import { feedingAmountForPayload, isDirectBreastfeeding } from "../../utils/feedings";
 
 const TYPES = [
   { value: "breast milk", key: "feeding.type.breastMilk" },
@@ -43,6 +44,7 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
   const [notes, setNotes] = useState(entry?.notes || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const directBreastfeeding = isDirectBreastfeeding(method);
   const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteFeeding(entry.id); onDone(); } catch { setSaving(false); } };
 
   const handleSubmit = async (e) => {
@@ -55,7 +57,7 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
     setSaving(true);
     try {
       const data = { type, method };
-      if (amount) data.amount = parseFloat(amount);
+      data.amount = feedingAmountForPayload(method, amount);
       if (notes.trim()) data.notes = notes.trim();
       if (isEdit) {
         data.start = `${start}:00`;
@@ -86,11 +88,22 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
           <FormSelect options={typeOptions} value={type} onChange={(e) => { setType(e.target.value); setError(""); }} />
         </FormField>
         <FormField label={t("form.feeding.method")}>
-          <FormSelect options={methodOptions} value={method} onChange={(e) => { setMethod(e.target.value); setError(""); }} />
+          <FormSelect options={methodOptions} value={method} onChange={(e) => {
+            const nextMethod = e.target.value;
+            setMethod(nextMethod);
+            if (isDirectBreastfeeding(nextMethod)) setAmount("");
+            setError("");
+          }} />
         </FormField>
-        <FormField label={`${t("common.quantity")} (${units.volume})`}>
-          <FormInput type="number" value={amount} onChange={(e) => { setAmount(e.target.value); setError(""); }} min="1" step="1" required />
-        </FormField>
+        {directBreastfeeding ? (
+          <div style={{ margin: "-2px 0 14px", color: "var(--text-muted)", fontSize: 12, lineHeight: 1.4 }}>
+            {t("form.feeding.directBreastfeedingHint")}
+          </div>
+        ) : (
+          <FormField label={`${t("common.quantity")} (${units.volume})`}>
+            <FormInput type="number" value={amount} onChange={(e) => { setAmount(e.target.value); setError(""); }} min="1" step="1" required />
+          </FormField>
+        )}
         {(isEdit || !timerId) && (
           <>
             <FormField label={t("common.start")}>

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Icons } from "../components/Icons";
 import { colors } from "../utils/colors";
 import { useLanguage } from "../utils/i18n";
+import { measurableFeedingAmount } from "../utils/feedings";
 import { useUnits } from "../utils/units";
 import { formatTime } from "../utils/formatters";
 
@@ -27,7 +28,10 @@ export default function DayTab({ feedings = [], pumping = [], milkWaste = [], ch
   const [hovered, setHovered] = useState(null);
   const selected = dateKey(day);
   const events = useMemo(() => [
-    ...feedings.map((e) => ({ ...e, type: "feeding", at: e.start, text: e.amount ? `${e.amount} ${units.volume}` : t("activity.feeding") })),
+    ...feedings.map((e) => {
+      const amount = measurableFeedingAmount(e);
+      return { ...e, type: "feeding", at: e.start, text: amount ? `${amount} ${units.volume}` : t("activity.feeding") };
+    }),
     ...pumping.map((e) => ({ ...e, type: "pumping", at: e.start, text: e.amount ? `${e.amount} ${units.volume}` : t("activity.pumping") })),
     ...milkWaste.map((e) => ({ ...e, type: "milkWaste", at: e.time, text: e.amount ? `${e.amount} ${units.volume}` : t("activity.milkWaste") })),
     ...changes.map((e) => ({ ...e, type: "diaper", at: e.time, text: e.wet && e.solid ? t("day.wetSolid") : e.wet ? t("day.wet") : t("day.solid") })),

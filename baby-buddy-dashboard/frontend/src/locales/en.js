@@ -207,6 +207,7 @@ export default {
   "form.feeding.type": "Feeding type",
   "form.feeding.method": "Method",
   "form.feeding.timerHint": "The timer start and end times will be used for this feeding.",
+  "form.feeding.directBreastfeedingHint": "No amount is requested for direct breastfeeding, and nothing is deducted from milk stock.",
   "form.feeding.save": "Save feeding",
   "form.feeding.editAction": "Edit feeding",
   "form.sleep.add": "Add sleep",
