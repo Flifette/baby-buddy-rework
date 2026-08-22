@@ -349,7 +349,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                       <CartesianGrid strokeDasharray="3 3" stroke="#252836" vertical={false} />
                       <XAxis dataKey={period === "day" ? "timestamp" : "date"} type={period === "day" ? "number" : "category"} scale={period === "day" ? "time" : "auto"} domain={period === "day" ? dayDomain : undefined} tickFormatter={period === "day" ? formatHour : undefined} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                       <YAxis yAxisId="volume" hide={!hasFeedingVolume} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} />
-                      <YAxis yAxisId="direct" hide={directBreastfeedingCount === 0 || (period === "day" && !hasFeedingVolume)} orientation="right" allowDecimals={false} tick={{ fontSize: 11, fill: period === "day" ? colors.feeding : colors.pumping }} axisLine={false} tickLine={false} />
+                      <YAxis yAxisId="direct" hide={directBreastfeedingCount === 0 || (period === "day" && !hasFeedingVolume)} orientation="right" allowDecimals={false} tick={{ fontSize: 11, fill: colors.pumping }} axisLine={false} tickLine={false} />
                       <Tooltip content={<CustomTooltip labelFormatter={period === "day" ? formatHour : undefined} />} />
                       <Legend verticalAlign="top" height={24} wrapperStyle={{ fontSize: 11 }} />
                       {hasFeedingVolume ? (period === "day" ? <Line
@@ -380,7 +380,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                         dataKey="directCount"
                         yAxisId="direct"
                         name={t("chart.directBreastfeedings")}
-                        stroke={period === "day" ? colors.feeding : colors.pumping}
+                        stroke={colors.pumping}
                         strokeOpacity={period === "day" ? 0 : 1}
                         strokeWidth={period === "day" ? 1 : 2}
                         strokeDasharray={period === "day" ? undefined : "4 3"}
@@ -400,8 +400,8 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                           y={value}
                           yAxisId={dataKey === "directCount" ? "direct" : "volume"}
                           r={4}
-                          fill={colors.feeding}
-                          stroke={colors.feeding}
+                          fill={dataKey === "directCount" ? colors.pumping : colors.feeding}
+                          stroke={dataKey === "directCount" ? colors.pumping : colors.feeding}
                           isFront
                           cursor="pointer"
                           onClick={() => setSelectedBar({ type: "feeding", label: formatHour(point.timestamp), value, entry: point.entry, dataKey })}
@@ -415,7 +415,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                     label={selectedBar.label}
                     value={selectedBar.value}
                     unit={selectedBar.dataKey === "directCount" ? t("growth.directBreastfeedingUnit") : units.volume}
-                    color={selectedBar.dataKey === "directCount" && period !== "day" ? colors.pumping : colors.feeding}
+                    color={selectedBar.dataKey === "directCount" ? colors.pumping : colors.feeding}
                     onViewEntries={() => {
                       if (period === "day" && selectedBar.entry) onEditEntry?.("feeding", selectedBar.entry);
                       else openDayModal(selectedBar.label, selectedBar.dateKey, "feeding");
