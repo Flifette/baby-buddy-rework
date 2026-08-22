@@ -349,7 +349,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                       <CartesianGrid strokeDasharray="3 3" stroke="#252836" vertical={false} />
                       <XAxis dataKey={period === "day" ? "timestamp" : "date"} type={period === "day" ? "number" : "category"} scale={period === "day" ? "time" : "auto"} domain={period === "day" ? dayDomain : undefined} tickFormatter={period === "day" ? formatHour : undefined} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                       <YAxis yAxisId="volume" hide={!hasFeedingVolume} tick={{ fontSize: 11, fill: "#5A6178" }} axisLine={false} tickLine={false} />
-                      <YAxis yAxisId="direct" hide={directBreastfeedingCount === 0} orientation="right" allowDecimals={false} tick={{ fontSize: 11, fill: period === "day" ? colors.feeding : colors.pumping }} axisLine={false} tickLine={false} />
+                      <YAxis yAxisId="direct" hide={directBreastfeedingCount === 0 || (period === "day" && !hasFeedingVolume)} orientation="right" allowDecimals={false} tick={{ fontSize: 11, fill: period === "day" ? colors.feeding : colors.pumping }} axisLine={false} tickLine={false} />
                       <Tooltip content={<CustomTooltip labelFormatter={period === "day" ? formatHour : undefined} />} />
                       <Legend verticalAlign="top" height={24} wrapperStyle={{ fontSize: 11 }} />
                       {hasFeedingVolume ? (period === "day" ? <Line
