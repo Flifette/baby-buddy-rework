@@ -301,6 +301,43 @@ export function dailyFeedingTotals(entries, numDays = 30, subtractEntries = [], 
   return firstNonZero > 0 ? result.slice(firstNonZero) : result;
 }
 
+export function dailyFeedingGrowthTotals(entries, numDays = 30, language = "fr") {
+  const addEntry = (totals, entry) => {
+    const key = entryDateStr(entry.start || entry.time || entry.date);
+    if (!key || !totals.has(key)) return;
+    const current = totals.get(key);
+    current.amount += measurableFeedingAmount(entry);
+    if (isDirectBreastfeeding(entry)) current.directCount += 1;
+  };
+
+  if (numDays == null) {
+    const keys = [...new Set(entries
+      .map((entry) => entryDateStr(entry.start || entry.time || entry.date))
+      .filter(Boolean))]
+      .sort();
+    const totals = new Map(keys.map((key) => [key, { amount: 0, directCount: 0 }]));
+    entries.forEach((entry) => addEntry(totals, entry));
+    return [...totals.entries()].map(([key, values]) => ({
+      date: new Date(`${key}T12:00:00`).toLocaleDateString(localeFor(language), { month: "short", day: "numeric" }),
+      dateKey: key,
+      amount: Math.max(0, Math.round(values.amount)),
+      directCount: values.directCount,
+    }));
+  }
+
+  const days = getLastNDays(numDays, language);
+  const totals = new Map(days.map((day) => [day.dateStr, { amount: 0, directCount: 0 }]));
+  entries.forEach((entry) => addEntry(totals, entry));
+  const result = days.map((day) => ({
+    date: day.label,
+    dateKey: day.dateStr,
+    amount: Math.max(0, Math.round(totals.get(day.dateStr).amount)),
+    directCount: totals.get(day.dateStr).directCount,
+  }));
+  const firstActivity = result.findIndex((day) => day.amount > 0 || day.directCount > 0);
+  return firstActivity > 0 ? result.slice(firstActivity) : result;
+}
+
 export function getEntriesForDay(entries, dayLabel, dateKey = "start") {
   const days = getLast7Days();
   const targetDay = days.find((d) => d.label === dayLabel);
