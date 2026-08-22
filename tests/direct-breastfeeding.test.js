@@ -9,6 +9,7 @@ import {
 import {
   aggregateByPeriod,
   applyMilkWasteToFeedings,
+  dailyFeedingGrowthTotals,
   dailyFeedingTotals,
   toFeedingTimeline,
 } from "../baby-buddy-dashboard/frontend/src/utils/formatters.js";
@@ -34,6 +35,21 @@ test("une ancienne quantité au sein est ignorée dans les totaux et les graphiq
 
   assert.equal(aggregateByPeriod(entries, "feeding", "all")[0].amount, 80);
   assert.equal(dailyFeedingTotals(entries, null)[0].amount, 80);
+});
+
+test("la croissance compte les allaitements au sein sans leur inventer de volume", () => {
+  const entries = [
+    { start: "2026-08-08T08:00:00", method: "left breast", amount: null },
+    { start: "2026-08-08T10:00:00", method: "right breast", amount: 120 },
+    { start: "2026-08-08T12:00:00", method: "bottle", amount: 80 },
+    { start: "2026-08-09T08:00:00", method: "both breasts", amount: null },
+  ];
+
+  const series = dailyFeedingGrowthTotals(entries, null, "fr");
+  assert.deepEqual(series.map(({ dateKey, amount, directCount }) => ({ dateKey, amount, directCount })), [
+    { dateKey: "2026-08-08", amount: 80, directCount: 2 },
+    { dateKey: "2026-08-09", amount: 0, directCount: 1 },
+  ]);
 });
 
 test("le lait non bu ne s’applique qu’au biberon et l’allaitement reste sans volume", () => {

@@ -6,7 +6,7 @@ export default function CustomTooltip({ active, payload, label, labelFormatter }
   const { t } = useLanguage();
   if (!active || !payload?.length) return null;
   const formattedLabel = labelFormatter ? labelFormatter(label) : label;
-  const names = { amount: t("chart.amount"), minutes: t("chart.minutes"), hours: t("chart.hours"), weight: t("chart.weight"), height: t("chart.height") };
+  const names = { amount: t("chart.amount"), directCount: t("chart.directBreastfeedings"), minutes: t("chart.minutes"), hours: t("chart.hours"), weight: t("chart.weight"), height: t("chart.height") };
   return (
     <div
       style={{
@@ -21,7 +21,9 @@ export default function CustomTooltip({ active, payload, label, labelFormatter }
       }}
     >
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{formattedLabel}</div>
-      {payload.map((p, i) => (
+      {payload.filter((p) => Number(p.value) !== 0 || payload.length === 1).map((p, i) => {
+        const dataKey = p.dataKey || p.name;
+        return (
         <div
           key={i}
           style={{
@@ -40,10 +42,11 @@ export default function CustomTooltip({ active, payload, label, labelFormatter }
               display: "inline-block",
             }}
           />
-          {names[p.name] || p.name}: {p.value}
-          {p.name === "amount" ? ` ${units.volume}` : p.name === "minutes" ? " min" : p.name === "weight" ? ` ${units.weight}` : p.name === "height" ? ` ${units.length}` : ""}
+          {names[dataKey] || p.name}: {p.value}
+          {dataKey === "amount" ? ` ${units.volume}` : dataKey === "minutes" ? " min" : dataKey === "weight" ? ` ${units.weight}` : dataKey === "height" ? ` ${units.length}` : ""}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
