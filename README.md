@@ -35,6 +35,7 @@ Above all, I want to offer a hundred million thanks to [herveaurel/HomeAssistant
 - Responsive desktop, tablet, and mobile interface
 - Quick create, edit, and delete forms
 - Feeding, sleep, diaper, pumping, tummy-time, measurement, and note tracking
+- Direct breastfeeding without an invented volume or milk-stock deduction, displayed separately from measured feedings in Growth charts
 - Configurable periods, charts, cards, and per-browser preferences
 - Estimated breast-milk stock and dashboard-only uneaten-milk occurrences
 - Complete French and English interface with a persistent language selector

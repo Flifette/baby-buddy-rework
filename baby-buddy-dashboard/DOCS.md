@@ -28,6 +28,12 @@ The preference is stored locally in the browser, so each device or browser profi
 
 The labels shown on the add-on **Configuration** tab are also available in English and French and follow the language selected in Home Assistant.
 
+### Direct breastfeeding
+
+When the feeding method is the left breast, right breast, or both breasts, the form does not request or send an estimated amount. Direct breastfeeding therefore never removes milk from the estimated stock.
+
+The Growth view still records these feedings as occurrences. In the Day period they appear as individual pink points, while measured feedings remain orange. Longer periods show the daily breastfeeding count in pink alongside measured feeding volumes without adding the two values together. Any amount stored on an older direct-breastfeeding record is ignored by dashboard totals, charts, and stock calculations.
+
 ### Uneaten milk persistence
 
 Uneaten-milk occurrences belong only to this dashboard and are saved in the add-on's persistent `/data` storage. They never create another feeding in Baby Buddy.
@@ -69,6 +75,12 @@ Le sélecteur compact **FR / EN** placé dans l’en-tête change immédiatement
 La préférence est mémorisée localement dans le navigateur : chaque appareil ou profil de navigateur peut donc conserver sa propre langue. Ce réglage modifie uniquement l’interface affichée ; il ne traduit ni ne modifie les occurrences Baby Buddy ou les valeurs techniques envoyées à son API. Le français est utilisé par défaut jusqu’à l’enregistrement d’un choix.
 
 Les libellés de l’onglet **Configuration** de l’add-on sont également disponibles en anglais et en français et suivent la langue choisie dans Home Assistant.
+
+### Allaitement au sein
+
+Lorsque la méthode choisie est sein gauche, sein droit ou les deux seins, le formulaire ne demande et n’envoie aucune quantité estimée. L’allaitement au sein ne retire donc jamais de lait du stock estimé.
+
+La vue Croissance conserve néanmoins chaque allaitement comme une occurrence. En temporalité Jour, il apparaît sous forme de point rose indépendant tandis que les repas mesurés restent orange. Les périodes plus longues affichent le nombre quotidien d’allaitements en rose à côté des volumes mesurés, sans additionner ces deux valeurs. Toute quantité présente sur un ancien allaitement est ignorée dans les totaux, graphiques et calculs de stock du dashboard.
 
 ### Persistance du lait non bu
 

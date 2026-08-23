@@ -170,5 +170,5 @@ test("Baby Buddy requirements clearly distinguish the add-on from HAOS examples"
   assert.match(addonDocs, /ne remplace pas Baby Buddy/);
   assert.match(examples, /require both a working Baby Buddy instance/);
   assert.match(examples, /nécessitent une instance Baby Buddy fonctionnelle/);
-  assert.match(addonConfig, /version:\s*"1\.6\.0"/);
+  assert.match(addonConfig, /version:\s*"1\.6\.1"/);
 });

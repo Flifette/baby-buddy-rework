@@ -1,5 +1,14 @@
 # Changelog
 
+# 1.6.1
+
+- Les allaitements au sein sont désormais enregistrés sans quantité estimée et ne réduisent jamais le stock de lait maternel.
+- La vue Croissance comptabilise les allaitements même sans volume : points roses indépendants en temporalité Jour et courbe rose quotidienne sur les périodes plus longues.
+- Les repas mesurés restent orange et conservent leur quantité en mL, sans addition artificielle avec les occurrences d’allaitement.
+- Les axes du graphique Jour ne sont affichés que lorsqu’ils sont utiles, notamment pour distinguer une journée mixte allaitement et repas mesurés.
+- Les anciennes quantités éventuellement présentes sur des allaitements sont ignorées dans les totaux, graphiques et calculs de stock.
+- Mise à jour de la dépendance de développement `nanoid` vers la version 3.3.18 et retrait d’un ancien fichier de travail VS Code.
+
 # 1.6.0
 
 - Clarification bilingue des prérequis : le Dashboard nécessite une instance Baby Buddy existante, mais pas l’intégration Home Assistant Baby Buddy séparée.

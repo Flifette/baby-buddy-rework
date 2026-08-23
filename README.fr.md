@@ -36,6 +36,7 @@ Mais je tiens surtout à adresser cent millions de mercis à [herveaurel/HomeAss
 - Interface responsive pour ordinateur, tablette et mobile
 - Création, modification et suppression rapides des occurrences
 - Suivi des repas, sommeils, changes, tirages, temps sur le ventre, mesures et notes
+- Allaitement au sein sans volume inventé ni déduction du stock, affiché séparément des repas mesurés dans les graphiques Croissance
 - Périodes, graphiques, cartes et préférences configurables
 - Stock estimé de lait maternel et occurrences indépendantes de lait non bu
 - Interface complète en français et en anglais avec choix de langue mémorisé
