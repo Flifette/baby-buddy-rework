@@ -1,5 +1,11 @@
 # Changelog
 
+# En préparation
+
+- Le stock estimé représente désormais le stock actuel cumulé, quelle que soit la temporalité sélectionnée ; les quantités tirées, données au biberon et non bues restent propres à la période affichée.
+- La modification d’une quantité de repas n’envoie plus à Baby Buddy les dates et heures inchangées, évitant leur revalidation et les erreurs « informations invalides ».
+- Les durées de sommeil de la vue Croissance en temporalité Jour sont arrondies à une décimale dans les points, les détails et les infobulles.
+
 # 1.6.1
 
 - Les allaitements au sein sont désormais enregistrés sans quantité estimée et ne réduisent jamais le stock de lait maternel.

@@ -27,7 +27,7 @@ import { isDirectBreastfeeding, measurableFeedingAmount } from "../utils/feeding
 
 const hourLabel = (value, locale) => new Date(value).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 
-export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySleep, tummyTimes = [], pumping = [], feedings = [], milkWaste = [], period = "week", onEditEntry, onEditMilkWaste, visibleTiles = {} }) {
+export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySleep, tummyTimes = [], pumping = [], feedings = [], stockFeedings = [], stockPumping = [], milkWaste = [], period = "week", onEditEntry, onEditMilkWaste, visibleTiles = {} }) {
   const units = useUnits();
   const { language, locale, t } = useLanguage();
   const formatHour = (value) => hourLabel(value, locale);
@@ -65,7 +65,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
     })
     : dailyFeedingGrowthTotals(netPeriodFeedings, chartDays, language);
   const sleepSeries = period === "day"
-    ? periodSleep.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: formatHour(entry.start), timestamp: new Date(entry.start).getTime(), hours: parseDuration(entry.duration), entry }))
+    ? periodSleep.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: formatHour(entry.start), timestamp: new Date(entry.start).getTime(), hours: Math.round(parseDuration(entry.duration) * 10) / 10, entry }))
     : dailySleepTotals(periodSleep, chartDays, language);
   const tummySeries = period === "day"
     ? periodTummy.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).map((entry) => ({ date: formatHour(entry.start), timestamp: new Date(entry.start).getTime(), minutes: Math.round(parseDuration(entry.duration) * 60), entry }))
@@ -460,7 +460,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
                 {selectedBar?.type === "sleep" && (
                   <ChartDetailBar
                     label={selectedBar.label}
-                    value={selectedBar.value}
+                    value={Number(selectedBar.value || 0).toFixed(1)}
                     unit={t("unit.hourShort")}
                     color={colors.sleep}
                     onViewEntries={() => {
@@ -609,7 +609,7 @@ export default function GrowthTab({ weights, heights, monthlyFeedings, monthlySl
       </div>
 
       {visibleTiles.milkStock !== false ? (<div style={{ marginTop: 16 }}>
-      <MilkStock pumping={pumping} feedings={feedings} milkWaste={milkWaste} onEditWaste={onEditMilkWaste} />
+      <MilkStock pumping={pumping} feedings={feedings} stockPumping={stockPumping} stockFeedings={stockFeedings} milkWaste={milkWaste} onEditWaste={onEditMilkWaste} />
       </div>) : null}
 
       {dayModal && (

@@ -9,6 +9,7 @@ import { formatTime } from "../utils/formatters";
 import { formatVolume } from "../utils/units";
 import { usePeriod } from "../utils/period";
 import { useLanguage } from "../utils/i18n";
+import { calculateCurrentMilkStock } from "../utils/milkStock";
 
 const PERIOD_DAYS = { day: 1, week: 7, month: 30, halfyear: 183, year: 365, all: null };
 
@@ -39,7 +40,7 @@ function FixedTimeBar({ x = 0, y = 0, width = 0, height = 0, fill, value }) {
   return <rect x={x + width / 2 - fixedWidth / 2} y={y} width={fixedWidth} height={height} fill={fill} rx="4" ry="4" />;
 }
 
-export default function MilkStock({ pumping = [], feedings = [], milkWaste = [], onEditWaste }) {
+export default function MilkStock({ pumping = [], feedings = [], stockPumping = [], stockFeedings = [], milkWaste = [], onEditWaste }) {
   const { period } = usePeriod();
   const { language, locale, t } = useLanguage();
   const [selectedBar, setSelectedBar] = useState(null);
@@ -87,8 +88,8 @@ export default function MilkStock({ pumping = [], feedings = [], milkWaste = [],
     const tire = periodPumping.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
     const consomme = periodConsumed.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
     const jete = periodWaste.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-    return { chart, tire, consomme, jete, stock: tire - consomme, waste: periodWaste, dayDomain: [start.getTime(), end.getTime()] };
-  }, [feedings, milkWaste, locale, period, pumping, t]);
+    return { chart, tire, consomme, jete, stock: calculateCurrentMilkStock(stockPumping, stockFeedings), waste: periodWaste, dayDomain: [start.getTime(), end.getTime()] };
+  }, [feedings, milkWaste, locale, period, pumping, stockFeedings, stockPumping, t]);
 
   const handleBarClick = (data, key, name) => {
     const source = data?.payload || data;

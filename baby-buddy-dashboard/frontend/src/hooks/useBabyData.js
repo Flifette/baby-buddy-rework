@@ -41,6 +41,8 @@ export function useBabyData(period = "week") {
   const [monthlyFeedings, setMonthlyFeedings] = useState([]);
   const [monthlySleep, setMonthlySleep] = useState([]);
   const [pumping, setPumping] = useState([]);
+  const [stockFeedings, setStockFeedings] = useState([]);
+  const [stockPumping, setStockPumping] = useState([]);
   const [milkWaste, setMilkWaste] = useState([]);
   const [notes, setNotes] = useState([]);
   const [timers, setTimers] = useState([]);
@@ -93,6 +95,8 @@ export function useBabyData(period = "week") {
         notesRes,
         pumpingRes,
         milkWasteRes,
+        stockFeedingsRes,
+        stockPumpingRes,
       ] = await Promise.all([
         api.getFeedings({ child: c, start_min: periodMin, start_max: periodDays === 1 ? todayMax : undefined, limit: 5000, ordering: "-start" }),
         api.getFeedings({ child: c, start_min: weekMin, limit: 200, ordering: "-start" }),
@@ -108,6 +112,8 @@ export function useBabyData(period = "week") {
         api.getNotes({ child: c, start_min: periodMin, limit: 5000, ordering: "-time" }),
         api.getPumping({ child: c, start_min: periodMin, limit: 5000, ordering: "-start" }),
         api.getMilkWaste({ child: c, start_min: periodMin, start_max: periodDays === 1 ? todayMax : undefined }),
+        api.getFeedings({ child: c, type: "breast milk", method: "bottle", limit: 5000, ordering: "-start" }),
+        api.getPumping({ child: c, limit: 5000, ordering: "-start" }),
       ]);
 
       if (requestId !== requestIdRef.current) return;
@@ -130,6 +136,8 @@ export function useBabyData(period = "week") {
       setMonthlySleep(resultList(sleepRes));
       setPumping(resultList(pumpingRes));
       setMilkWaste(resultList(milkWasteRes));
+      setStockFeedings(resultList(stockFeedingsRes));
+      setStockPumping(resultList(stockPumpingRes));
       setLastSync(new Date());
       setError(null);
     } catch (err) {
@@ -190,6 +198,8 @@ export function useBabyData(period = "week") {
     setMonthlyFeedings(mock.monthlyFeedings);
     setMonthlySleep(mock.monthlySleep);
     setPumping([]);
+    setStockFeedings(mock.feedings);
+    setStockPumping([]);
     setMilkWaste([]);
     setLastSync(new Date());
     setLoading(false);
@@ -217,6 +227,8 @@ export function useBabyData(period = "week") {
       setMonthlyFeedings(mock.monthlyFeedings);
       setMonthlySleep(mock.monthlySleep);
       setPumping([]);
+      setStockFeedings(mock.feedings);
+      setStockPumping([]);
       setMilkWaste([]);
     },
     [children, child]
@@ -263,6 +275,8 @@ export function useBabyData(period = "week") {
     monthlyFeedings,
     monthlySleep,
     pumping,
+    stockFeedings,
+    stockPumping,
     milkWaste,
     notes,
     timers,
