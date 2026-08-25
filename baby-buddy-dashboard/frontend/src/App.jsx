@@ -149,7 +149,7 @@ export default function App() {
 function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, setPeriod, modal, setModal, showActions, setShowActions, expandedGroup, setExpandedGroup, showTimerPicker, setShowTimerPicker, editingTimerId, setEditingTimerId, tileVisibility, setTileVisibility, showTileSettings, setShowTileSettings }) {
   const { language, locale, setLanguage, t } = useLanguage();
   const data = { ...rawData };
-  ["children", "feedings", "weeklyFeedings", "sleepEntries", "weeklySleep", "changes", "tummyTimes", "weeklyTummyTimes", "temperatures", "weights", "heights", "monthlyFeedings", "monthlySleep", "pumping", "milkWaste", "notes"].forEach((key) => {
+  ["children", "feedings", "weeklyFeedings", "sleepEntries", "weeklySleep", "changes", "tummyTimes", "weeklyTummyTimes", "temperatures", "weights", "heights", "monthlyFeedings", "monthlySleep", "pumping", "stockFeedings", "stockPumping", "milkWaste", "notes"].forEach((key) => {
     if (!Array.isArray(data[key])) data[key] = [];
   });
   const children = Array.isArray(data.children) ? data.children : [];
@@ -318,6 +318,8 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
             tummyTimes={data.tummyTimes}
             weeklyTummyTimes={data.weeklyTummyTimes}
             pumping={data.pumping}
+            stockFeedings={data.stockFeedings}
+            stockPumping={data.stockPumping}
             milkWaste={data.milkWaste}
             period={period}
             visibleTiles={tileVisibility.overview}
@@ -336,6 +338,8 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
             tummyTimes={data.tummyTimes}
             pumping={data.pumping}
             feedings={data.feedings}
+            stockFeedings={data.stockFeedings}
+            stockPumping={data.stockPumping}
             milkWaste={data.milkWaste}
             period={period}
             visibleTiles={tileVisibility.growth}

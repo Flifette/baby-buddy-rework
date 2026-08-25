@@ -23,6 +23,7 @@ export default function CustomTooltip({ active, payload, label, labelFormatter }
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{formattedLabel}</div>
       {payload.filter((p) => Number(p.value) !== 0 || payload.length === 1).map((p, i) => {
         const dataKey = p.dataKey || p.name;
+        const value = dataKey === "hours" ? Number(p.value || 0).toFixed(1) : p.value;
         return (
         <div
           key={i}
@@ -42,7 +43,7 @@ export default function CustomTooltip({ active, payload, label, labelFormatter }
               display: "inline-block",
             }}
           />
-          {names[dataKey] || p.name}: {p.value}
+          {names[dataKey] || p.name}: {value}
           {dataKey === "amount" ? ` ${units.volume}` : dataKey === "minutes" ? " min" : dataKey === "weight" ? ` ${units.weight}` : dataKey === "height" ? ` ${units.length}` : ""}
         </div>
         );

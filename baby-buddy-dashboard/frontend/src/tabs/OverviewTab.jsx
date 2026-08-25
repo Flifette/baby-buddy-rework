@@ -32,10 +32,11 @@ import {
 import { useUnits, formatVolume } from "../utils/units";
 import { useLanguage } from "../utils/i18n";
 import { measurableFeedingAmount } from "../utils/feedings";
+import { calculateCurrentMilkStock } from "../utils/milkStock";
 
 const COLLAPSED_COUNT = 2;
 
-export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRaw, sleepEntries, weeklySleep, changes, tummyTimes, weeklyTummyTimes, pumping = [], milkWaste = [], period = "week", onEditEntry, visibleTiles = {} }) {
+export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRaw, sleepEntries, weeklySleep, changes, tummyTimes, weeklyTummyTimes, pumping = [], stockFeedings = [], stockPumping = [], milkWaste = [], period = "week", onEditEntry, visibleTiles = {} }) {
   const units = useUnits();
   const { language, locale, t } = useLanguage();
   const [expanded, setExpanded] = useState({});
@@ -58,6 +59,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
   const totalPumpingConsumed = feedings
     .filter((f) => f.type === "breast milk" && f.method === "bottle")
     .reduce((s, f) => s + Number(f.amount || 0), 0);
+  const currentMilkStock = calculateCurrentMilkStock(stockPumping, stockFeedings);
   const pumpingTimeline = pumping
     .slice()
     .sort((a, b) => new Date(b.end || b.start || 0) - new Date(a.end || a.start || 0))
@@ -370,7 +372,7 @@ export default function OverviewTab({ feedings, weeklyFeedings: weeklyFeedingsRa
                   <div style={{ width: 1, background: "var(--border)" }} />
                   <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.milkWaste }}>{formatVolume(totalMilkWaste)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.notConsumed")}</div></div>
                   <div style={{ width: 1, background: "var(--border)" }} />
-                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: colors.growth }}>{formatVolume(totalPumping - totalPumpingConsumed)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.estimatedStock")}</div></div>
+                  <div style={{ flex: 1, textAlign: "center" }}><div style={{ fontSize: 18, fontWeight: 700, color: currentMilkStock < 0 ? "var(--error-color)" : colors.growth }}>{formatVolume(currentMilkStock)}</div><div style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("overview.estimatedStock")}</div></div>
                 </div>
               </div>
             ) : (

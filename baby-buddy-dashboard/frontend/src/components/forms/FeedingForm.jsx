@@ -5,7 +5,7 @@ import { colors } from "../../utils/colors";
 import { useUnits } from "../../utils/units";
 import { useLanguage } from "../../utils/i18n";
 import { apiErrorTranslationKey } from "../../utils/formValidation";
-import { feedingAmountForPayload, isDirectBreastfeeding } from "../../utils/feedings";
+import { feedingAmountForPayload, feedingPatchPayload, isDirectBreastfeeding } from "../../utils/feedings";
 
 const TYPES = [
   { value: "breast milk", key: "feeding.type.breastMilk" },
@@ -39,8 +39,10 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
   const [type, setType] = useState(entry?.type || "breast milk");
   const [method, setMethod] = useState(entry?.method || "bottle");
   const [amount, setAmount] = useState(entry?.amount != null ? String(entry.amount) : "");
-  const [start, setStart] = useState(entry?.start ? toLocalDatetime(new Date(entry.start)) : toLocalDatetime(fifteenMinsAgo));
-  const [end, setEnd] = useState(entry?.end ? toLocalDatetime(new Date(entry.end)) : toLocalDatetime(now));
+  const originalStart = entry?.start ? toLocalDatetime(new Date(entry.start)) : toLocalDatetime(fifteenMinsAgo);
+  const originalEnd = entry?.end ? toLocalDatetime(new Date(entry.end)) : toLocalDatetime(now);
+  const [start, setStart] = useState(originalStart);
+  const [end, setEnd] = useState(originalEnd);
   const [notes, setNotes] = useState(entry?.notes || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -56,14 +58,14 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
     }
     setSaving(true);
     try {
-      const data = { type, method };
-      data.amount = feedingAmountForPayload(method, amount);
-      if (notes.trim()) data.notes = notes.trim();
       if (isEdit) {
-        data.start = `${start}:00`;
-        data.end = `${end}:00`;
-        await api.updateFeeding(entry.id, data);
+        const data = feedingPatchPayload(entry, {
+          type, method, amount, start, end, notes, originalStart, originalEnd,
+        });
+        if (Object.keys(data).length > 0) await api.updateFeeding(entry.id, data);
       } else {
+        const data = { type, method, amount: feedingAmountForPayload(method, amount) };
+        if (notes.trim()) data.notes = notes.trim();
         data.child = childId;
         if (timerId) {
           data.timer = timerId;
