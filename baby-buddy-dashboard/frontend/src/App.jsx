@@ -25,6 +25,7 @@ import TimerButton from "./components/TimerButton";
 import Modal from "./components/Modal";
 import { useLanguage } from "./utils/i18n";
 import { timerTypeFromName } from "./utils/timerAppearance";
+import { localDatetimeToApi } from "./utils/datetime";
 import "./styles.css";
 
 const TABS = [
@@ -247,7 +248,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
                 autoFocus
                 onBlur={(e) => {
                   if (e.target.value) {
-                    timer.editTimer(timerEntry.id, `${e.target.value}:00`);
+                    timer.editTimer(timerEntry.id, localDatetimeToApi(e.target.value));
                   }
                   setEditingTimerId(null);
                 }}

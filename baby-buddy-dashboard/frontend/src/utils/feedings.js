@@ -1,3 +1,5 @@
+import { localDatetimeToApi } from "./datetime.js";
+
 const DIRECT_BREASTFEEDING_METHODS = new Set([
   "left breast",
   "right breast",
@@ -21,6 +23,18 @@ export function feedingAmountForPayload(method, amount) {
   return Number(amount);
 }
 
+function toLocalDatetime(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function shiftFeedingEndWithStart(originalStart, originalEnd, nextStart) {
+  const duration = new Date(originalEnd).getTime() - new Date(originalStart).getTime();
+  const nextStartDate = new Date(nextStart);
+  if (!Number.isFinite(duration) || duration < 0 || Number.isNaN(nextStartDate.getTime())) return originalEnd;
+  return toLocalDatetime(new Date(nextStartDate.getTime() + duration));
+}
+
 export function feedingPatchPayload(entry, draft) {
   const patch = {};
 
@@ -31,8 +45,8 @@ export function feedingPatchPayload(entry, draft) {
   const currentAmount = feedingAmountForPayload(entry.method, entry.amount);
   if (nextAmount !== currentAmount) patch.amount = nextAmount;
 
-  if (draft.start !== draft.originalStart) patch.start = `${draft.start}:00`;
-  if (draft.end !== draft.originalEnd) patch.end = `${draft.end}:00`;
+  if (draft.start !== draft.originalStart) patch.start = localDatetimeToApi(draft.start);
+  if (draft.end !== draft.originalEnd) patch.end = localDatetimeToApi(draft.end);
 
   const nextNotes = String(draft.notes || "").trim();
   const currentNotes = String(entry.notes || "").trim();

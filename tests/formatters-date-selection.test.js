@@ -6,6 +6,7 @@ import {
   dailyFeedingTotals,
   dailySleepTotals,
   dailyTummyTotals,
+  formatDuration,
   getEntriesForDateKey,
 } from "../baby-buddy-dashboard/frontend/src/utils/formatters.js";
 
@@ -37,4 +38,11 @@ test("les libellés de graphiques suivent la langue sans modifier leur clé de d
   assert.equal(french.dateKey, dateKey);
   assert.equal(english.dateKey, dateKey);
   assert.notEqual(french.day, english.day);
+});
+
+test("la vue Journée présente les durées de sommeil sans décimales inutiles", () => {
+  assert.equal(formatDuration("00:42:00", "fr"), "42 min");
+  assert.equal(formatDuration("05:15:00", "fr"), "5 h 15 min");
+  assert.equal(formatDuration("01:00:00", "fr"), "1 h");
+  assert.equal(formatDuration("01:14:40", "en"), "1 h 15 min");
 });

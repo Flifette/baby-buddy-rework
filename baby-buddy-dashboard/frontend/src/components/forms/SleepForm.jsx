@@ -6,6 +6,7 @@ import { colors } from "../../utils/colors";
 import { useLanguage } from "../../utils/i18n";
 import { formatTime } from "../../utils/formatters";
 import { apiErrorTranslationKey, findTimeOverlap } from "../../utils/formValidation";
+import { localDatetimeToApi } from "../../utils/datetime";
 
 function toLocalDatetime(date) {
   const pad = (n) => String(n).padStart(2, "0");
@@ -43,8 +44,8 @@ export default function SleepForm({ childId, timerId, entry, sleepEntries = [], 
     try {
       if (isEdit) {
         const data = {
-          start: `${start}:00`,
-          end: `${end}:00`,
+          start: localDatetimeToApi(start),
+          end: localDatetimeToApi(end),
         };
         if (notes.trim()) data.notes = notes.trim();
         await api.updateSleep(entry.id, data);
@@ -54,8 +55,8 @@ export default function SleepForm({ childId, timerId, entry, sleepEntries = [], 
         if (timerId) {
           data.timer = timerId;
         } else {
-          data.start = `${start}:00`;
-          data.end = `${end}:00`;
+          data.start = localDatetimeToApi(start);
+          data.end = localDatetimeToApi(end);
         }
         await api.createSleep(data);
       }

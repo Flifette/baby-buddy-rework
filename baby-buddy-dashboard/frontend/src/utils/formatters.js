@@ -53,9 +53,11 @@ export function parseDuration(durationStr) {
 
 export function formatDuration(durationStr, language = "fr") {
   if (!durationStr) return "—";
-  const hours = parseDuration(durationStr);
-  if (hours < 1) return `${Math.round(hours * 60)} ${translate("unit.minuteShort", {}, language)}`;
-  return `${hours.toFixed(1)} ${translate("unit.hourShort", {}, language)}`;
+  const totalMinutes = Math.round(parseDuration(durationStr) * 60);
+  if (totalMinutes < 60) return `${totalMinutes} ${translate("unit.minuteShort", {}, language)}`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours} ${translate("unit.hourShort", {}, language)}${minutes ? ` ${minutes} ${translate("unit.minuteShort", {}, language)}` : ""}`;
 }
 
 export function applyMilkWasteToFeedings(feedings = [], milkWaste = []) {
