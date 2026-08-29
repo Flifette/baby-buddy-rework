@@ -157,6 +157,9 @@ export default {
   "growth.twoMeasurements": "At least 2 measurements are required to display a trend",
 
   "day.subtitle": "Timeline of today's activities",
+  "day.chooseDate": "Choose a date",
+  "day.previousDate": "Previous day",
+  "day.nextDate": "Next day",
   "day.noActivity": "No activities recorded for this day.",
   "day.wetSolid": "Wet and solid",
   "day.wet": "Wet",

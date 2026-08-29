@@ -157,6 +157,9 @@ export default {
   "growth.twoMeasurements": "Il faut au moins 2 mesures pour afficher l’évolution",
 
   "day.subtitle": "Chronologie des activités du jour",
+  "day.chooseDate": "Choisir une date",
+  "day.previousDate": "Jour précédent",
+  "day.nextDate": "Jour suivant",
   "day.noActivity": "Aucune activité enregistrée pour cette journée.",
   "day.wetSolid": "Humide et solide",
   "day.wet": "Humide",
