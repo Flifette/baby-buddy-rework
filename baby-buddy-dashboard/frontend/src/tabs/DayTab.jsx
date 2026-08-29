@@ -4,10 +4,7 @@ import { colors } from "../utils/colors";
 import { useLanguage } from "../utils/i18n";
 import { measurableFeedingAmount } from "../utils/feedings";
 import { useUnits } from "../utils/units";
-import { formatDuration, formatTime } from "../utils/formatters";
-
-const pad = (n) => String(n).padStart(2, "0");
-const dateKey = (value) => { const d = new Date(value); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+import { formatDuration, formatTime, localDateFromKey, localDateKey } from "../utils/formatters";
 const TYPES = {
   feeding: ["feeding", colors.feeding, Icons.Bottle],
   pumping: ["pumping", colors.pumping, Icons.Pump],
@@ -26,7 +23,8 @@ export default function DayTab({ feedings = [], pumping = [], milkWaste = [], ch
   const units = useUnits();
   const [day, setDay] = useState(new Date());
   const [hovered, setHovered] = useState(null);
-  const selected = dateKey(day);
+  const selected = localDateKey(day);
+  const todayKey = localDateKey(new Date());
   const events = useMemo(() => [
     ...feedings.map((e) => {
       const amount = measurableFeedingAmount(e);
@@ -41,14 +39,31 @@ export default function DayTab({ feedings = [], pumping = [], milkWaste = [], ch
     ...weights.map((e) => ({ ...e, activityType: "weight", at: e.date, text: `${e.weight ?? e.value ?? "—"} ${units.weight}` })),
     ...heights.map((e) => ({ ...e, activityType: "height", at: e.date, text: `${e.height ?? e.value ?? "—"} ${units.length}` })),
     ...notes.map((e) => ({ ...e, activityType: "note", at: e.time, text: e.note || t("activity.note") })),
-  ].filter((e) => e.at && dateKey(e.at) === selected).sort((a, b) => new Date(a.at) - new Date(b.at)), [selected, feedings, pumping, milkWaste, changes, sleepEntries, tummyTimes, temperatures, weights, heights, notes, language, t, units]);
+  ].filter((e) => e.at && localDateKey(e.at) === selected).sort((a, b) => new Date(a.at) - new Date(b.at)), [selected, feedings, pumping, milkWaste, changes, sleepEntries, tummyTimes, temperatures, weights, heights, notes, language, t, units]);
 
-  const shift = (amount) => setDay((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + amount));
+  const shift = (amount) => setDay((current) => {
+    const candidate = new Date(current.getFullYear(), current.getMonth(), current.getDate() + amount, 12);
+    return localDateKey(candidate) <= todayKey ? candidate : current;
+  });
+
+  const selectDay = (event) => {
+    const candidate = localDateFromKey(event.target.value);
+    if (candidate && event.target.value <= todayKey) setDay(candidate);
+  };
 
   return (
     <div className="day-page fade-in">
       <div className="day-header"><div><h2>{t("nav.day")}</h2><span>{t("day.subtitle")}</span></div><Icons.Activity /></div>
-      <div className="day-controls"><button onClick={() => shift(-1)}>‹</button><strong>{day.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}</strong><button onClick={() => shift(1)}>›</button><button className="day-today" onClick={() => setDay(new Date())}>{t("common.today")}</button></div>
+      <div className="day-controls">
+        <button type="button" onClick={() => shift(-1)} aria-label={t("day.previousDate")}>‹</button>
+        <label className="day-date-picker" title={t("day.chooseDate")}>
+          <Icons.Calendar />
+          <strong>{day.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}</strong>
+          <input type="date" value={selected} max={todayKey} onChange={selectDay} aria-label={t("day.chooseDate")} />
+        </label>
+        <button type="button" onClick={() => shift(1)} disabled={selected >= todayKey} aria-label={t("day.nextDate")}>›</button>
+        <button type="button" className="day-today" disabled={selected === todayKey} onClick={() => setDay(new Date())}>{t("common.today")}</button>
+      </div>
       <div className="day-timeline">
         {events.length ? events.map((event, index) => {
           const [labelKey, color, Icon] = TYPES[event.activityType] || TYPES.note;

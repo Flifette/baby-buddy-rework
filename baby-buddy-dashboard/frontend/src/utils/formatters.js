@@ -1,6 +1,20 @@
 import { localeFor, translate } from "./i18nCore.js";
 import { isDirectBreastfeeding, measurableFeedingAmount } from "./feedings.js";
 
+export function localDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function localDateFromKey(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+  if (!match) return null;
+  const [, year, month, day] = match.map(Number);
+  const date = new Date(year, month - 1, day, 12);
+  return localDateKey(date) === value ? date : null;
+}
+
 export function getAge(birthDate, language = "fr") {
   const birth = new Date(birthDate);
   const now = new Date();

@@ -2,6 +2,7 @@
 
 # En préparation
 
+- La vue Journée permet désormais d’ouvrir un calendrier natif depuis sa date centrale afin d’accéder directement à une journée précise ; les dates futures sont bloquées et les flèches ainsi que le raccourci « Aujourd’hui » restent disponibles.
 - Lorsqu’un repas existant est déplacé dans le temps, son heure de fin suit automatiquement son heure de début afin de conserver sa durée et d’éviter les périodes invalides ; la vue Journée préserve également le véritable type du repas pendant l’édition.
 - Les modifications d’horaires des repas et des tirages transmettent désormais un instant absolu avec son fuseau, ce qui évite les décalages silencieux et les faux horaires futurs ; les tirages utilisent également un PATCH minimal sans dupliquer l’indication du sein dans la note.
 - La même conversion temporelle fiable est appliquée aux changes, sommeils, temps sur le ventre, notes, lait non bu et réglages de minuteur, aussi bien lors de la création que de la modification.
