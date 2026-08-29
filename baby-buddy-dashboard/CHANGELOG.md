@@ -2,6 +2,10 @@
 
 # En préparation
 
+- Lorsqu’un repas existant est déplacé dans le temps, son heure de fin suit automatiquement son heure de début afin de conserver sa durée et d’éviter les périodes invalides ; la vue Journée préserve également le véritable type du repas pendant l’édition.
+- Les modifications d’horaires des repas et des tirages transmettent désormais un instant absolu avec son fuseau, ce qui évite les décalages silencieux et les faux horaires futurs ; les tirages utilisent également un PATCH minimal sans dupliquer l’indication du sein dans la note.
+- La même conversion temporelle fiable est appliquée aux changes, sommeils, temps sur le ventre, notes, lait non bu et réglages de minuteur, aussi bien lors de la création que de la modification.
+- Les occurrences de sommeil de la vue Journée affichent désormais leur durée utile (`42 min`, `5 h 15 min`) à la place du libellé « Sommeil » répété.
 - Le stock estimé représente désormais le stock actuel cumulé, quelle que soit la temporalité sélectionnée ; les quantités tirées, données au biberon et non bues restent propres à la période affichée.
 - La modification d’une quantité de repas n’envoie plus à Baby Buddy les dates et heures inchangées, évitant leur revalidation et les erreurs « informations invalides ».
 - Les durées de sommeil de la vue Croissance en temporalité Jour sont arrondies à une décimale dans les points, les détails et les infobulles.

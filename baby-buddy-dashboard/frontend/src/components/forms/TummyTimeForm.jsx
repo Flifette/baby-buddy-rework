@@ -4,6 +4,7 @@ import Modal, { FormField, FormInput, FormButton, FormError, DeleteIconButton } 
 import { colors } from "../../utils/colors";
 import { useLanguage } from "../../utils/i18n";
 import { apiErrorTranslationKey } from "../../utils/formValidation";
+import { localDatetimeToApi } from "../../utils/datetime";
 
 function toLocalDatetime(date) {
   const pad = (n) => String(n).padStart(2, "0");
@@ -32,7 +33,7 @@ export default function TummyTimeForm({ childId, timerId, entry, onDone, onClose
     setSaving(true);
     try {
       if (isEdit) {
-        const data = { start: `${start}:00`, end: `${end}:00` };
+        const data = { start: localDatetimeToApi(start), end: localDatetimeToApi(end) };
         if (milestone.trim()) data.milestone = milestone.trim();
         await api.updateTummyTime(entry.id, data);
       } else {
@@ -40,8 +41,8 @@ export default function TummyTimeForm({ childId, timerId, entry, onDone, onClose
         if (timerId) {
           data.timer = timerId;
         } else {
-          data.start = `${start}:00`;
-          data.end = `${end}:00`;
+          data.start = localDatetimeToApi(start);
+          data.end = localDatetimeToApi(end);
         }
         if (milestone.trim()) data.milestone = milestone.trim();
         await api.createTummyTime(data);

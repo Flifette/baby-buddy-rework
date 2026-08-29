@@ -4,6 +4,7 @@ import Modal, { DeleteIconButton, FormButton, FormError, FormField, FormInput } 
 import { colors } from "../../utils/colors";
 import { useLanguage } from "../../utils/i18n";
 import { apiErrorTranslationKey } from "../../utils/formValidation";
+import { localDatetimeToApi } from "../../utils/datetime";
 
 function localDateTime(date) {
   const pad = (value) => String(value).padStart(2, "0");
@@ -22,7 +23,7 @@ export default function MilkWasteForm({ childId, entry, onDone, onClose }) {
     event.preventDefault();
     setError("");
     setSaving(true);
-    const data = { child: childId, amount: Number(amount), time: `${time}:00`, note: note.trim() };
+    const data = { child: childId, amount: Number(amount), time: localDatetimeToApi(time), note: note.trim() };
     try {
       if (entry?.id) await api.updateMilkWaste(entry.id, data);
       else await api.createMilkWaste(data);

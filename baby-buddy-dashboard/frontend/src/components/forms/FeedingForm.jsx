@@ -5,7 +5,8 @@ import { colors } from "../../utils/colors";
 import { useUnits } from "../../utils/units";
 import { useLanguage } from "../../utils/i18n";
 import { apiErrorTranslationKey } from "../../utils/formValidation";
-import { feedingAmountForPayload, feedingPatchPayload, isDirectBreastfeeding } from "../../utils/feedings";
+import { feedingAmountForPayload, feedingPatchPayload, isDirectBreastfeeding, shiftFeedingEndWithStart } from "../../utils/feedings";
+import { localDatetimeToApi } from "../../utils/datetime";
 
 const TYPES = [
   { value: "breast milk", key: "feeding.type.breastMilk" },
@@ -70,8 +71,8 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
         if (timerId) {
           data.timer = timerId;
         } else {
-          data.start = `${start}:00`;
-          data.end = `${end}:00`;
+          data.start = localDatetimeToApi(start);
+          data.end = localDatetimeToApi(end);
         }
         await api.createFeeding(data);
       }
@@ -112,7 +113,12 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
               <FormInput
                 type="datetime-local"
                 value={start}
-                onChange={(e) => { setStart(e.target.value); setError(""); }}
+                onChange={(e) => {
+                  const nextStart = e.target.value;
+                  setStart(nextStart);
+                  if (isEdit) setEnd(shiftFeedingEndWithStart(originalStart, originalEnd, nextStart));
+                  setError("");
+                }}
                 required
               />
             </FormField>

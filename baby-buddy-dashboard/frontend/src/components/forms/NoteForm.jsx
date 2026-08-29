@@ -4,6 +4,7 @@ import Modal, { FormField, FormInput, FormButton, FormError, DeleteIconButton } 
 import { colors } from "../../utils/colors";
 import { useLanguage } from "../../utils/i18n";
 import { apiErrorTranslationKey } from "../../utils/formValidation";
+import { localDatetimeToApi } from "../../utils/datetime";
 
 function toLocalDatetime(date) {
   const pad = (n) => String(n).padStart(2, "0");
@@ -24,7 +25,7 @@ export default function NoteForm({ childId, entry, onDone, onClose }) {
     setError("");
     setSaving(true);
     try {
-      const data = { note: note.trim(), time: `${time}:00` };
+      const data = { note: note.trim(), time: localDatetimeToApi(time) };
       if (isEdit) {
         await api.updateNote(entry.id, data);
       } else {
