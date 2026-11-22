@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useBabyData } from "./hooks/useBabyData";
 import { useTimers } from "./hooks/useTimers";
 import { UnitContext } from "./utils/units";
@@ -96,25 +96,12 @@ function toLocalDatetime(date) {
 }
 
 export default function App() {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const [period, setPeriod] = useState("week");
-  const data = useBabyData(period);
-  const timer = useTimers(data.timers, data.child?.id);
   const [activeTab, setActiveTab] = useState("overview");
-  const periodBeforeDay = useRef(null);
-
-  useEffect(() => {
-    if (activeTab === "day") {
-      if (periodBeforeDay.current === null) {
-        periodBeforeDay.current = period;
-        if (period !== "all") setPeriod("all");
-      }
-    } else if (periodBeforeDay.current !== null) {
-      const restore = periodBeforeDay.current;
-      periodBeforeDay.current = null;
-      if (period !== restore) setPeriod(restore);
-    }
-  }, [activeTab, period]);
+  const [day, setDay] = useState(() => new Date());
+  const data = useBabyData(period, { activeTab, day });
+  const timer = useTimers(data.timers, data.child?.id, data.refetch);
   const [modal, setModal] = useState(null);
   const [showActions, setShowActions] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState("tracking");
@@ -124,14 +111,12 @@ export default function App() {
   const [showTileSettings, setShowTileSettings] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("baby-buddy-tile-visibility", JSON.stringify(tileVisibility));
+    try {
+      localStorage.setItem("baby-buddy-tile-visibility", JSON.stringify(tileVisibility));
+    } catch {
+      // The settings remain usable for this session if storage is disabled.
+    }
   }, [tileVisibility]);
-
-  const closeModal = () => setModal(null);
-  const handleFormDone = () => {
-    closeModal();
-    data.refetch();
-  };
 
   if (data.loading) {
     return (
@@ -143,11 +128,24 @@ export default function App() {
   }
 
   return (
-    <AppContent data={data} timer={timer} activeTab={activeTab} setActiveTab={setActiveTab} period={period} setPeriod={setPeriod} modal={modal} setModal={setModal} showActions={showActions} setShowActions={setShowActions} expandedGroup={expandedGroup} setExpandedGroup={setExpandedGroup} showTimerPicker={showTimerPicker} setShowTimerPicker={setShowTimerPicker} editingTimerId={editingTimerId} setEditingTimerId={setEditingTimerId} tileVisibility={tileVisibility} setTileVisibility={setTileVisibility} showTileSettings={showTileSettings} setShowTileSettings={setShowTileSettings} />
+    <AppContent data={data} timer={timer} activeTab={activeTab} setActiveTab={setActiveTab} period={period} setPeriod={setPeriod} day={day} setDay={setDay} modal={modal} setModal={setModal} showActions={showActions} setShowActions={setShowActions} expandedGroup={expandedGroup} setExpandedGroup={setExpandedGroup} showTimerPicker={showTimerPicker} setShowTimerPicker={setShowTimerPicker} editingTimerId={editingTimerId} setEditingTimerId={setEditingTimerId} tileVisibility={tileVisibility} setTileVisibility={setTileVisibility} showTileSettings={showTileSettings} setShowTileSettings={setShowTileSettings} />
   );
 }
 
-function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, setPeriod, modal, setModal, showActions, setShowActions, expandedGroup, setExpandedGroup, showTimerPicker, setShowTimerPicker, editingTimerId, setEditingTimerId, tileVisibility, setTileVisibility, showTileSettings, setShowTileSettings }) {
+function TimerElapsed({ start, label, onEdit, disabled }) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const clock = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(clock);
+  }, []);
+  return (
+    <button type="button" className="timer-elapsed" title={label} aria-label={label} disabled={disabled} onClick={onEdit}>
+      {formatElapsed(Math.max(0, Math.floor((now - start.getTime()) / 1000)))}
+    </button>
+  );
+}
+
+function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, setPeriod, day, setDay, modal, setModal, showActions, setShowActions, expandedGroup, setExpandedGroup, showTimerPicker, setShowTimerPicker, editingTimerId, setEditingTimerId, tileVisibility, setTileVisibility, showTileSettings, setShowTileSettings }) {
   const { language, locale, setLanguage, t } = useLanguage();
   const data = { ...rawData };
   ["children", "feedings", "weeklyFeedings", "sleepEntries", "weeklySleep", "changes", "tummyTimes", "weeklyTummyTimes", "temperatures", "weights", "heights", "monthlyFeedings", "monthlySleep", "pumping", "stockFeedings", "stockPumping", "milkWaste", "notes"].forEach((key) => {
@@ -155,8 +153,16 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
   });
   const children = Array.isArray(data.children) ? data.children : [];
   const activeTimers = Array.isArray(timer.activeTimers) ? timer.activeTimers : [];
-  const closeModal = () => setModal(null);
-  const handleFormDone = () => { closeModal(); data.refetch(); };
+  const closeModal = () => setModal((current) => current === modal ? null : current);
+  const handleFormDone = () => {
+    if (modal?.timerId != null) timer.confirmTimerSaved(modal.timerId);
+    closeModal();
+    data.refetch();
+  };
+  const formChildId = modal?.childId ?? data.child?.id;
+  const syncError = data.error
+    ? t(data.lastSync ? "common.syncStale" : "common.connectionError")
+    : data.failedSections?.length ? t("common.syncPartial") : null;
   return (
     <UnitContext.Provider value={data.unitSystem}><PeriodContext.Provider value={{ period, setPeriod }}>
     <div className="app">
@@ -188,10 +194,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {data.error && (
-            <span className="sync-error">{t("common.connectionError")}</span>
-          )}
-          {data.lastSync && !data.error && (
+          {data.lastSync && (
             <span className="sync-time">
               {data.lastSync.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
             </span>
@@ -199,7 +202,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
           <a className="refresh-btn" href="/lovelace/0" target="_top" rel="noreferrer" title={t("common.homeAssistant")}>
             <Icons.Home />
           </a>
-          <button className="refresh-btn" onClick={data.refetch} title={t("common.refresh")} aria-label={t("common.refresh")}>
+          <button className="refresh-btn" onClick={() => data.refetch()} aria-busy={data.refreshing} title={t("common.refresh")} aria-label={t("common.refresh")}>
             <Icons.Activity />
           </button>
           <button className="refresh-btn" onClick={() => setShowTileSettings(true)} title={t("settings.title")} aria-label={t("settings.title")}>
@@ -215,6 +218,13 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
           </label>
         </div>
       </header>
+      {syncError && (
+        <div className="sync-notice sync-error" role="status">
+          {syncError}
+          <button type="button" className="refresh-btn" onClick={() => data.refetch()}>{t("common.tryAgain")}</button>
+        </div>
+      )}
+      {timer.errorKey && <div className="sync-notice sync-error" role="alert">{t(timer.errorKey)}</div>}
 
       {/* Active Timer Bars */}
       {activeTimers.map((timerEntry) => {
@@ -247,39 +257,36 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
                 defaultValue={toLocalDatetime(timerEntry.start)}
                 autoFocus
                 onBlur={(e) => {
-                  if (e.target.value) {
-                    timer.editTimer(timerEntry.id, localDatetimeToApi(e.target.value));
+                  const value = e.currentTarget.value;
+                  if (e.currentTarget.dataset.cancelEdit !== "true" && value && value !== toLocalDatetime(timerEntry.start)) {
+                    timer.editTimer(timerEntry, localDatetimeToApi(value));
                   }
                   setEditingTimerId(null);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") e.target.blur();
-                  if (e.key === "Escape") setEditingTimerId(null);
+                  if (e.key === "Escape") {
+                    e.currentTarget.dataset.cancelEdit = "true";
+                    e.currentTarget.blur();
+                  }
                 }}
               />
             ) : (
-              <span
-                className="timer-elapsed"
-                style={{ cursor: "pointer" }}
-                title={t("common.editStart")}
-                onClick={() => setEditingTimerId(timerEntry.id)}
-              >
-                {formatElapsed(timer.elapsedMap[timerEntry.id] || 0)}
-              </span>
+              <TimerElapsed start={timerEntry.start} label={t("common.editStart")} disabled={timer.busy} onEdit={() => setEditingTimerId(timerEntry.id)} />
             )}
             <button
               className="timer-save-btn"
-              onClick={async () => {
-                const stopped = await timer.stopTimer(timerEntry.id);
-                if (stopped) {
-                  setModal({ type: timerTypeFromName(stopped.name), timerId: stopped.id });
-                }
+              disabled={timer.busy}
+              onClick={() => {
+                  setModal({ type: timerType, timerId: timerEntry.id, timerStart: timerEntry.start, childId: timerEntry.child?.id ?? timerEntry.child ?? data.child?.id });
               }}
             >
               {t("common.save")}
             </button>
             <button
               className="timer-discard-btn"
+              disabled={timer.busy}
+              aria-label={t("timer.discard")}
               onClick={() => timer.discardTimer(timerEntry.id)}
             >
               <Icons.X />
@@ -328,7 +335,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
           />
         )}
         {activeTab === "day" && (
-          <DayTab feedings={data.feedings} pumping={data.pumping} milkWaste={data.milkWaste} changes={data.changes} sleepEntries={data.sleepEntries} tummyTimes={data.tummyTimes} temperatures={data.temperatures} weights={data.weights} heights={data.heights} notes={data.notes} onEditEntry={(type, entry) => setModal({ type, entry })} />
+          <DayTab day={day} onDayChange={setDay} loading={data.viewLoading} feedings={data.feedings} pumping={data.pumping} milkWaste={data.milkWaste} changes={data.changes} sleepEntries={data.sleepEntries} tummyTimes={data.tummyTimes} temperatures={data.temperatures} weights={data.weights} heights={data.heights} notes={data.notes} onEditEntry={(type, entry) => setModal({ type, entry, childId: data.child?.id })} />
         )}
         {activeTab === "growth" && (
           <GrowthTab
@@ -406,8 +413,9 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
                         <button
                           key={action.id}
                           className="fab-action"
+                          disabled={!data.child?.id}
                           onClick={() => {
-                            setModal({ type: action.modalType || action.id });
+                            setModal({ type: action.modalType || action.id, childId: data.child?.id });
                             setShowActions(false);
                           }}
                         >
@@ -433,6 +441,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
               <button
                 key={timerType.id}
                 className="fab-action"
+                disabled={timer.busy || !data.child?.id}
                 onClick={() => {
                   timer.startTimer(timerType.id);
                   setShowTimerPicker(false);
@@ -473,7 +482,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       {/* Modals */}
       {modal?.type === "feeding" && (
         <FeedingForm
-          childId={data.child?.id}
+          childId={formChildId}
           timerId={modal.timerId}
           entry={modal.entry}
           onDone={handleFormDone}
@@ -482,8 +491,9 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "sleep" && (
         <SleepForm
-          childId={data.child?.id}
+          childId={formChildId}
           timerId={modal.timerId}
+          timerStart={modal.timerStart}
           entry={modal.entry}
           sleepEntries={data.sleepEntries}
           onDone={handleFormDone}
@@ -492,7 +502,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "diaper" && (
         <DiaperForm
-          childId={data.child?.id}
+          childId={formChildId}
           entry={modal.entry}
           onDone={handleFormDone}
           onClose={closeModal}
@@ -500,7 +510,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "temp" && (
         <TemperatureForm
-          childId={data.child?.id}
+          childId={formChildId}
           entry={modal.entry}
           onDone={handleFormDone}
           onClose={closeModal}
@@ -508,7 +518,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "tummy" && (
         <TummyTimeForm
-          childId={data.child?.id}
+          childId={formChildId}
           timerId={modal.timerId}
           entry={modal.entry}
           onDone={handleFormDone}
@@ -517,7 +527,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "weight" && (
         <WeightForm
-          childId={data.child?.id}
+          childId={formChildId}
           entry={modal.entry}
           onDone={handleFormDone}
           onClose={closeModal}
@@ -525,7 +535,7 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "height" && (
         <HeightForm
-          childId={data.child?.id}
+          childId={formChildId}
           entry={modal.entry}
           onDone={handleFormDone}
           onClose={closeModal}
@@ -533,17 +543,17 @@ function AppContent({ data: rawData, timer, activeTab, setActiveTab, period, set
       )}
       {modal?.type === "note" && (
         <NoteForm
-          childId={data.child?.id}
+          childId={formChildId}
           entry={modal.entry}
           onDone={handleFormDone}
           onClose={closeModal}
         />
       )}
       {modal?.type === "pumping" && (
-        <PumpingForm childId={data.child?.id} entry={modal.entry} onDone={handleFormDone} onClose={closeModal} />
+        <PumpingForm childId={formChildId} entry={modal.entry} onDone={handleFormDone} onClose={closeModal} />
       )}
       {modal?.type === "milkWaste" && (
-        <MilkWasteForm childId={data.child?.id} entry={modal.entry} onDone={handleFormDone} onClose={closeModal} />
+        <MilkWasteForm childId={formChildId} entry={modal.entry} onDone={handleFormDone} onClose={closeModal} />
       )}
     </div>
       </PeriodContext.Provider></UnitContext.Provider>

@@ -88,28 +88,33 @@ export function applyMilkWasteToFeedings(feedings = [], milkWaste = []) {
     .slice()
     .sort((left, right) => new Date(left.time) - new Date(right.time));
 
+  const bottleFeedingsByDay = new Map();
+  for (const entry of adjusted) {
+    if (entry.type !== "breast milk" || entry.method !== "bottle" || !(Number(entry.amount) > 0)) continue;
+    const value = entry.end || entry.start;
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) continue;
+    const day = entryDateStr(value);
+    if (!bottleFeedingsByDay.has(day)) bottleFeedingsByDay.set(day, []);
+    bottleFeedingsByDay.get(day).push({ entry, timestamp });
+  }
+  for (const candidates of bottleFeedingsByDay.values()) {
+    candidates.sort((left, right) => right.timestamp - left.timestamp);
+  }
+
   wasteEntries.forEach((waste) => {
     let remaining = Number(waste.amount || 0);
     const wasteTime = new Date(waste.time).getTime();
     const wasteDay = entryDateStr(waste.time);
-    const candidates = adjusted
-      .map((entry, index) => ({ entry, index, timestamp: new Date(entry.end || entry.start).getTime() }))
-      .filter(({ entry, timestamp }) =>
-        entry.type === "breast milk"
-        && entry.method === "bottle"
-        && Number(entry.amount || 0) > 0
-        && entryDateStr(entry.end || entry.start) === wasteDay
-        && timestamp <= wasteTime)
-      .sort((left, right) => right.timestamp - left.timestamp);
-
-    candidates.forEach(({ index }) => {
-      if (remaining <= 0) return;
-      const available = Number(adjusted[index].amount || 0);
+    for (const { entry, timestamp } of bottleFeedingsByDay.get(wasteDay) ?? []) {
+      if (remaining <= 0) break;
+      if (timestamp > wasteTime) continue;
+      const available = Number(entry.amount || 0);
       const deducted = Math.min(available, remaining);
-      adjusted[index].amount = available - deducted;
-      adjusted[index]._milkWasteAmount += deducted;
+      entry.amount = available - deducted;
+      entry._milkWasteAmount += deducted;
       remaining -= deducted;
-    });
+    }
   });
 
   return adjusted;
@@ -257,8 +262,27 @@ export function aggregateByPeriod(entries, kind, period = "week", subtractEntrie
   const source = Array.isArray(entries) ? entries : [];
   const subtractions = Array.isArray(subtractEntries) ? subtractEntries : [];
   if (period === "all") {
-    const keys = [...new Set([...source, ...subtractions].map((e) => entryDateStr(e.start || e.time || e.date)).filter(Boolean))].sort();
-    return keys.map((key) => ({ day: new Date(`${key}T12:00:00`).toLocaleDateString(localeFor(language), { day: "2-digit", month: "short" }), dateKey: key, amount: Math.max(0, source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + measurableFeedingAmount(e), 0) - subtractions.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + Number(e.amount || 0), 0)), hours: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration), 0), minutes: source.filter((e) => entryDateStr(e.start || e.time || e.date) === key).reduce((s, e) => s + parseDuration(e.duration) * 60, 0) }));
+    const totals = new Map();
+    const totalFor = (entry) => {
+      const key = entryDateStr(entry.start || entry.time || entry.date);
+      if (!totals.has(key)) totals.set(key, { amount: 0, deducted: 0, hours: 0, minutes: 0 });
+      return totals.get(key);
+    };
+    for (const entry of source) {
+      const total = totalFor(entry);
+      const duration = parseDuration(entry.duration);
+      total.amount += measurableFeedingAmount(entry);
+      total.hours += duration;
+      total.minutes += duration * 60;
+    }
+    for (const entry of subtractions) totalFor(entry).deducted += Number(entry.amount || 0);
+
+    const label = new Intl.DateTimeFormat(localeFor(language), { day: "2-digit", month: "short" });
+    return [...totals.keys()].sort().map((dateKey) => {
+      const { amount, deducted, hours, minutes } = totals.get(dateKey);
+      const date = new Date(`${dateKey}T12:00:00`);
+      return { day: Number.isFinite(date.getTime()) ? label.format(date) : date.toLocaleDateString(localeFor(language)), dateKey, amount: Math.max(0, amount - deducted), hours, minutes };
+    });
   }
   const result = getLastNDays(days, language);
   const sums = Object.fromEntries(result.map((d) => [d.dateStr, { amount: 0, hours: 0, minutes: 0 }]));

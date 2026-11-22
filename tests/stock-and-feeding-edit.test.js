@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { calculateCurrentMilkStock } from "../baby-buddy-dashboard/frontend/src/utils/milkStock.js";
 import { feedingPatchPayload, shiftFeedingEndWithStart } from "../baby-buddy-dashboard/frontend/src/utils/feedings.js";
 import { localDatetimeToApi } from "../baby-buddy-dashboard/frontend/src/utils/datetime.js";
-import { parsePumpingNote, pumpingPatchPayload } from "../baby-buddy-dashboard/frontend/src/utils/pumping.js";
+import { isPumpingPeriodValid, parsePumpingNote, pumpingPatchPayload } from "../baby-buddy-dashboard/frontend/src/utils/pumping.js";
 
 test("le stock actuel reste cumulatif indépendamment de la période affichée", () => {
   const pumping = [{ amount: 100 }, { amount: 80 }, { amount: 58 }];
@@ -102,6 +102,25 @@ test("modifier un tirage envoie un PATCH minimal avec des heures absolues", () =
     start: localDatetimeToApi("2026-08-27T16:15"),
     end: localDatetimeToApi("2026-08-27T16:30"),
   });
+});
+
+test("un tirage sans durée reste modifiable", () => {
+  assert.equal(isPumpingPeriodValid("2026-08-30T05:06", "2026-08-30T05:06"), true);
+  assert.equal(isPumpingPeriodValid("2026-08-30T05:07", "2026-08-30T05:06"), false);
+  assert.equal(isPumpingPeriodValid("date invalide", "2026-08-30T05:06"), false);
+
+  assert.deepEqual(pumpingPatchPayload({ amount: 140 }, {
+    amount: "150",
+    side: "both",
+    start: "2026-08-30T05:06",
+    end: "2026-08-30T05:06",
+    originalStart: "2026-08-30T05:06",
+    originalEnd: "2026-08-30T05:06",
+    notes: "",
+    originalSide: "both",
+    originalNotes: "",
+    serializedNotes: "Sein : Les deux seins",
+  }), { amount: 150 });
 });
 
 test("tous les formulaires temporels envoient un instant absolu", () => {

@@ -21,10 +21,22 @@ export default function TummyTimeForm({ childId, timerId, entry, onDone, onClose
   const [end, setEnd] = useState(entry?.end ? toLocalDatetime(new Date(entry.end)) : toLocalDatetime(now));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteTummyTime(entry.id); onDone(); } catch { setSaving(false); } };
+  const remove = async () => {
+    if (!entry?.id || saving) return;
+    setError("");
+    setSaving(true);
+    try {
+      await api.deleteTummyTime(entry.id);
+      onDone();
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
+      setSaving(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
     if (!timerId && new Date(end) <= new Date(start)) {
       setError(t("form.error.endBeforeStart"));
@@ -55,7 +67,7 @@ export default function TummyTimeForm({ childId, timerId, entry, onDone, onClose
   };
 
   return (
-    <Modal title={t(isEdit ? "form.tummy.edit" : "form.tummy.add")} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.tummy.edit" : "form.tummy.add")} onClose={onClose} busy={saving}>
       <form onSubmit={handleSubmit}>
         {!isEdit && timerId ? (
           <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>

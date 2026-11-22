@@ -1,289 +1,223 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { api } from "../api";
-import { getMockData } from "../utils/mockData";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api, ApiError } from "../api.js";
+import { createRefreshLoop, createSectionReads, readAllPages, refreshSections } from "../utils/babyDataRefresh.js";
+import { localDateKey } from "../utils/formatters.js";
+import { getMockData } from "../utils/mockData.js";
 
-function toLocalISODate(date) {
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
+const EMPTY = [];
+const EMPTY_SNAPSHOT = { data: {}, errors: {}, complete: false, lastSync: null, fullError: null };
+const DEFAULT_CONFIG = { demo_mode: false, refresh_interval: 30, unit_system: "metric" };
 
-function fixChildPicture(c) {
-  if (c?.picture) {
-    try {
-      const url = new URL(c.picture);
-      c.picture = `./api/media${url.pathname}`;
-    } catch {
-      // leave as-is if not a valid URL
-    }
+function fixChildPicture(child) {
+  if (!child?.picture) return child;
+  try {
+    return { ...child, picture: `./api/media${new URL(child.picture).pathname}` };
+  } catch {
+    return child;
   }
-  return c;
 }
 
-function resultList(response) {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.results)) return response.results;
-  return [];
+function scopeKey(child, tab, period, day) {
+  return JSON.stringify([child, tab, tab === "day" ? day : period]);
 }
 
-export function useBabyData(period = "week") {
-  const [children, setChildren] = useState([]);
-  const [child, setChild] = useState(null);
-  const [feedings, setFeedings] = useState([]);
-  const [weeklyFeedings, setWeeklyFeedings] = useState([]);
-  const [sleepEntries, setSleepEntries] = useState([]);
-  const [weeklySleep, setWeeklySleep] = useState([]);
-  const [changes, setChanges] = useState([]);
-  const [tummyTimes, setTummyTimes] = useState([]);
-  const [weeklyTummyTimes, setWeeklyTummyTimes] = useState([]);
-  const [temperatures, setTemperatures] = useState([]);
-  const [weights, setWeights] = useState([]);
-  const [heights, setHeights] = useState([]);
-  const [monthlyFeedings, setMonthlyFeedings] = useState([]);
-  const [monthlySleep, setMonthlySleep] = useState([]);
-  const [pumping, setPumping] = useState([]);
-  const [stockFeedings, setStockFeedings] = useState([]);
-  const [stockPumping, setStockPumping] = useState([]);
-  const [milkWaste, setMilkWaste] = useState([]);
-  const [notes, setNotes] = useState([]);
-  const [timers, setTimers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastSync, setLastSync] = useState(null);
-  const [unitSystem, setUnitSystem] = useState("metric");
-  const intervalRef = useRef(null);
-  const childIdRef = useRef(null);
-  const requestIdRef = useRef(0);
+function remember(previous, key, value, maximum) {
+  const next = new Map(previous);
+  next.delete(key);
+  next.set(key, value);
+  if (next.size > maximum) next.delete(next.keys().next().value);
+  return next;
+}
 
-  const fetchData = useCallback(async (childId) => {
-    const requestId = ++requestIdRef.current;
-    try {
-      const now = new Date();
-
-      const todayStr = toLocalISODate(now);
-      const todayMin = `${todayStr}T00:00:00`;
-      const todayMax = `${todayStr}T23:59:59`;
-
-      const twentyFourAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const sleepMin = `${toLocalISODate(twentyFourAgo)}T${String(twentyFourAgo.getHours()).padStart(2, "0")}:${String(twentyFourAgo.getMinutes()).padStart(2, "0")}:00`;
-
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 6);
-      const weekMin = `${toLocalISODate(weekAgo)}T00:00:00`;
-
-      const monthAgo = new Date(now);
-      monthAgo.setDate(monthAgo.getDate() - 29);
-      const monthMin = `${toLocalISODate(monthAgo)}T00:00:00`;
-      const periodDays = { day: 1, week: 7, month: 30, halfyear: 183, year: 365 }[period];
-      const periodDate = new Date(now);
-      if (periodDays) periodDate.setDate(periodDate.getDate() - (periodDays - 1));
-      const periodMin = periodDays ? `${toLocalISODate(periodDate)}T00:00:00` : undefined;
-
-      const c = childId || undefined;
-
-      const [
-        feedingsRes,
-        weeklyFeedingsRes,
-        sleepRes,
-        weeklySleepRes,
-        changesRes,
-        tummyRes,
-        weeklyTummyRes,
-        tempRes,
-        weightRes,
-        heightRes,
-        timersRes,
-        notesRes,
-        pumpingRes,
-        milkWasteRes,
-        stockFeedingsRes,
-        stockPumpingRes,
-      ] = await Promise.all([
-        api.getFeedings({ child: c, start_min: periodMin, start_max: periodDays === 1 ? todayMax : undefined, limit: 5000, ordering: "-start" }),
-        api.getFeedings({ child: c, start_min: weekMin, limit: 200, ordering: "-start" }),
-        api.getSleep({ child: c, start_min: period === "all" ? undefined : (periodMin || sleepMin), limit: 5000, ordering: "-start" }),
-        api.getSleep({ child: c, start_min: weekMin, limit: 200, ordering: "-start" }),
-        api.getChanges({ child: c, date_min: period === "all" ? undefined : (periodMin || todayMin), date_max: periodDays === 1 ? todayMax : undefined, limit: 5000, ordering: "-time" }),
-        api.getTummyTimes({ child: c, start_min: period === "all" ? undefined : (periodMin || todayMin), start_max: periodDays === 1 ? todayMax : undefined, limit: 5000, ordering: "-start" }),
-        api.getTummyTimes({ child: c, start_min: weekMin, limit: 200, ordering: "-start" }),
-        api.getTemperature({ child: c, limit: 10, ordering: "-time" }),
-        api.getWeight({ child: c, limit: 20, ordering: "-date" }),
-        api.getHeight({ child: c, limit: 20, ordering: "-date" }),
-        api.getTimers(),
-        api.getNotes({ child: c, start_min: periodMin, limit: 5000, ordering: "-time" }),
-        api.getPumping({ child: c, start_min: periodMin, limit: 5000, ordering: "-start" }),
-        api.getMilkWaste({ child: c, start_min: periodMin, start_max: periodDays === 1 ? todayMax : undefined }),
-        api.getFeedings({ child: c, type: "breast milk", method: "bottle", limit: 5000, ordering: "-start" }),
-        api.getPumping({ child: c, limit: 5000, ordering: "-start" }),
-      ]);
-
-      if (requestId !== requestIdRef.current) return;
-
-      setFeedings(resultList(feedingsRes));
-      setWeeklyFeedings(resultList(weeklyFeedingsRes));
-      setSleepEntries(resultList(sleepRes));
-      setWeeklySleep(resultList(weeklySleepRes));
-      setChanges(resultList(changesRes));
-      setTummyTimes(resultList(tummyRes));
-      setWeeklyTummyTimes(resultList(weeklyTummyRes));
-      setTemperatures(resultList(tempRes));
-      setWeights(resultList(weightRes));
-      setHeights(resultList(heightRes));
-      setTimers(resultList(timersRes));
-      setNotes(resultList(notesRes));
-      // Growth uses the same period-filtered data. Reusing these responses avoids
-      // downloading the complete feeding and sleep history twice for "Total".
-      setMonthlyFeedings(resultList(feedingsRes));
-      setMonthlySleep(resultList(sleepRes));
-      setPumping(resultList(pumpingRes));
-      setMilkWaste(resultList(milkWasteRes));
-      setStockFeedings(resultList(stockFeedingsRes));
-      setStockPumping(resultList(stockPumpingRes));
-      setLastSync(new Date());
-      setError(null);
-    } catch (err) {
-      if (requestId === requestIdRef.current) setError(err.message);
-    } finally {
-      if (requestId === requestIdRef.current) setLoading(false);
-    }
-  }, [period]);
-
-  const fetchAll = useCallback(async () => {
-    try {
-      const childrenRes = await api.getChildren();
-      const allChildren = resultList(childrenRes).map(fixChildPicture);
-      setChildren(allChildren);
-
-      const active = allChildren.find((c) => c.id === childIdRef.current) || allChildren[0] || null;
-      if (active) {
-        childIdRef.current = active.id;
-        setChild(active);
-      }
-
-      await fetchData(active?.id);
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-    }
-  }, [fetchData]);
-
-  const selectChild = useCallback(
-    (id) => {
-      const selected = children.find((c) => c.id === id);
-      if (!selected || selected.id === child?.id) return;
-      childIdRef.current = id;
-      setChild(selected);
-      setLoading(true);
-      fetchData(id);
-    },
-    [children, child, fetchData]
-  );
-
-  const loadMock = useCallback(() => {
-    const mock = getMockData();
-    setChildren(mock.children);
-    setChild(mock.children[0]);
-    childIdRef.current = mock.children[0].id;
-    setFeedings(mock.feedings);
-    setWeeklyFeedings(mock.weeklyFeedings);
-    setSleepEntries(mock.sleepEntries);
-    setWeeklySleep(mock.weeklySleep);
-    setChanges(mock.changes);
-    setTummyTimes(mock.tummyTimes);
-    setWeeklyTummyTimes(mock.weeklyTummyTimes);
-    setTemperatures(mock.temperatures);
-    setWeights(mock.weights);
-    setHeights(mock.heights);
-    setTimers(mock.timers);
-    setNotes(mock.notes);
-    setMonthlyFeedings(mock.monthlyFeedings);
-    setMonthlySleep(mock.monthlySleep);
-    setPumping([]);
-    setStockFeedings(mock.feedings);
-    setStockPumping([]);
-    setMilkWaste([]);
-    setLastSync(new Date());
-    setLoading(false);
-  }, []);
-
-  const selectMockChild = useCallback(
-    (id) => {
-      const selected = children.find((c) => c.id === id);
-      if (!selected || selected.id === child?.id) return;
-      childIdRef.current = id;
-      setChild(selected);
-      const mock = getMockData(id);
-      setFeedings(mock.feedings);
-      setWeeklyFeedings(mock.weeklyFeedings);
-      setSleepEntries(mock.sleepEntries);
-      setWeeklySleep(mock.weeklySleep);
-      setChanges(mock.changes);
-      setTummyTimes(mock.tummyTimes);
-      setWeeklyTummyTimes(mock.weeklyTummyTimes);
-      setTemperatures(mock.temperatures);
-      setWeights(mock.weights);
-      setHeights(mock.heights);
-      setTimers(mock.timers);
-      setNotes(mock.notes);
-      setMonthlyFeedings(mock.monthlyFeedings);
-      setMonthlySleep(mock.monthlySleep);
-      setPumping([]);
-      setStockFeedings(mock.feedings);
-      setStockPumping([]);
-      setMilkWaste([]);
-    },
-    [children, child]
-  );
-
-  const demoRef = useRef(false);
+export function useBabyData(period = "week", { activeTab = "overview", day = new Date() } = {}) {
+  const dayKey = activeTab === "day" ? localDateKey(day) : null;
+  const [config, setConfig] = useState(null);
+  const [children, setChildren] = useState(EMPTY);
+  const [selectedId, setSelectedId] = useState(null);
+  const [childrenReady, setChildrenReady] = useState(false);
+  const [childrenError, setChildrenError] = useState(null);
+  const [offline, setOffline] = useState(() => navigator.onLine === false);
+  const [snapshots, setSnapshots] = useState(() => new Map());
+  const [timersByChild, setTimersByChild] = useState(() => new Map());
+  const [stockByChild, setStockByChild] = useState(() => new Map());
+  const [refreshingKey, setRefreshingKey] = useState(null);
+  const childrenRef = useRef(EMPTY);
+  const loopRef = useRef(null);
 
   useEffect(() => {
-    api
-      .getConfig()
-      .then((cfg) => {
-        if (cfg.unit_system) setUnitSystem(cfg.unit_system);
-        if (cfg.demo_mode) {
-          demoRef.current = true;
-          loadMock();
-        } else {
-          fetchAll();
-          const ms = (cfg.refresh_interval || 30) * 1000;
-          intervalRef.current = setInterval(fetchAll, ms);
-        }
-      })
-      .catch(() => {
-        fetchAll();
-        intervalRef.current = setInterval(fetchAll, 30000);
-      });
+    const controller = new AbortController();
+    const loop = createRefreshLoop(async () => {
+      try {
+        const settings = await api.getConfig({ signal: controller.signal });
+        if (controller.signal.aborted) return;
+        if (typeof settings?.demo_mode !== "boolean") throw new ApiError("Invalid settings");
+        loop.stop();
+        setConfig({ ...DEFAULT_CONFIG, ...settings });
+      } catch {
+        if (!controller.signal.aborted) setConfig(previous => previous || DEFAULT_CONFIG);
+      }
+    }, { interval: 30000, available: () => navigator.onLine !== false && document.visibilityState !== "hidden" });
+    const checkAvailability = () => {
+      const disconnected = navigator.onLine === false;
+      setOffline(disconnected);
+      if (disconnected) setConfig(previous => previous || DEFAULT_CONFIG);
+      void loop.refresh();
+    };
+    document.addEventListener("visibilitychange", checkAvailability);
+    window.addEventListener("pageshow", checkAvailability);
+    window.addEventListener("online", checkAvailability);
+    window.addEventListener("offline", checkAvailability);
+    checkAvailability();
+    return () => {
+      loop.stop();
+      controller.abort();
+      document.removeEventListener("visibilitychange", checkAvailability);
+      window.removeEventListener("pageshow", checkAvailability);
+      window.removeEventListener("online", checkAvailability);
+      window.removeEventListener("offline", checkAvailability);
+    };
+  }, []);
 
-    return () => clearInterval(intervalRef.current);
-  }, [fetchAll, loadMock]);
+  const demo = config?.demo_mode;
+  const mock = useMemo(() => demo ? getMockData(selectedId) : null, [demo, selectedId]);
+  const availableChildren = mock?.children || children;
+  const child = availableChildren.find(item => item.id === selectedId) || availableChildren[0] || null;
+  const key = scopeKey(child?.id, activeTab, period, dayKey);
+  const snapshot = snapshots.get(key) || EMPTY_SNAPSHOT;
+
+  useEffect(() => {
+    if (!config || demo) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const updateSnapshot = (target, apply) => setSnapshots(previous =>
+      signal.aborted ? previous : remember(previous, target, apply(previous.get(target) || EMPTY_SNAPSHOT), 4));
+
+    const run = async () => {
+      let childList = childrenRef.current;
+      let active = childList.find(item => item.id === selectedId) || childList[0];
+      setRefreshingKey(scopeKey(active?.id, activeTab, period, dayKey));
+      try {
+        childList = (await readAllPages(api.getChildren, {}, signal)).map(fixChildPicture);
+        if (signal.aborted) return;
+        childrenRef.current = childList;
+        setChildren(childList);
+        setChildrenError(null);
+      } catch (error) {
+        if (signal.aborted) return;
+        setChildrenError(error);
+      } finally {
+        if (!signal.aborted) setChildrenReady(true);
+      }
+
+      active = childList.find(item => item.id === selectedId) || childList[0];
+      const target = scopeKey(active?.id, activeTab, period, dayKey);
+      setRefreshingKey(target);
+      try {
+        if (!active) {
+          updateSnapshot(target, previous => ({ ...previous, complete: true }));
+          return;
+        }
+
+        const { reads, fullStock } = createSectionReads(api, active.id, period, activeTab, dayKey);
+        const settled = {};
+        let firstError = null;
+        await refreshSections(reads, signal, ({ key: sectionKey }, result) => {
+          const { data, error } = result;
+          if (error && !firstError) firstError = error;
+          if (data) {
+            Object.assign(settled, data);
+            if (sectionKey === "timers") {
+              setTimersByChild(previous => signal.aborted ? previous : remember(previous, active.id, data.timers, 4));
+            } else if (sectionKey === "stock") {
+              setStockByChild(previous => signal.aborted ? previous : remember(previous, active.id, data, 2));
+            }
+          }
+          updateSnapshot(target, previous => {
+            const errors = { ...previous.errors };
+            if (error) errors[sectionKey] = error;
+            else delete errors[sectionKey];
+            return { ...previous, data: data ? { ...previous.data, ...data } : previous.data, errors };
+          });
+        });
+
+        if (signal.aborted) return;
+        if (fullStock && settled.feedings && settled.pumping) {
+          const stock = { stockFeedings: settled.feedings, stockPumping: settled.pumping };
+          setStockByChild(previous => signal.aborted ? previous : remember(previous, active.id, stock, 2));
+        }
+        updateSnapshot(target, previous => ({
+          ...previous,
+          complete: true,
+          lastSync: firstError ? previous.lastSync : new Date(),
+          fullError: Object.keys(settled).length ? null : firstError,
+        }));
+      } finally {
+        if (!signal.aborted) setRefreshingKey(null);
+      }
+    };
+
+    const loop = createRefreshLoop(run, {
+      interval: (Number(config.refresh_interval) || 30) * 1000,
+      available: () => navigator.onLine !== false && document.visibilityState !== "hidden",
+    });
+    const resume = (event) => {
+      void loop.refresh({ queue: event.type === "online" });
+    };
+    loopRef.current = loop;
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("pageshow", resume);
+    window.addEventListener("online", resume);
+    window.addEventListener("offline", resume);
+    void loop.refresh();
+
+    return () => {
+      loop.stop();
+      controller.abort();
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("pageshow", resume);
+      window.removeEventListener("online", resume);
+      window.removeEventListener("offline", resume);
+      loopRef.current = null;
+    };
+  }, [config, demo, selectedId, period, activeTab, dayKey]);
+
+  const selectChild = useCallback((id) => setSelectedId(id), []);
+  const refetch = useCallback(() => loopRef.current?.refresh({ queue: true }), []);
+  const data = mock || snapshot.data;
+  const stock = stockByChild.get(child?.id);
+  const errors = demo ? {} : { ...snapshot.errors };
+  if (!demo && childrenError) errors.children = childrenError;
+  if (offline && !demo) errors.connection = new ApiError("Offline", { code: "request_network" });
 
   return {
-    children,
+    children: availableChildren,
     child,
-    selectChild: demoRef.current ? selectMockChild : selectChild,
-    feedings,
-    weeklyFeedings,
-    sleepEntries,
-    weeklySleep,
-    changes,
-    tummyTimes,
-    weeklyTummyTimes,
-    temperatures,
-    weights,
-    heights,
-    monthlyFeedings,
-    monthlySleep,
-    pumping,
-    stockFeedings,
-    stockPumping,
-    milkWaste,
-    notes,
-    timers,
-    loading,
-    error,
-    lastSync,
-    unitSystem,
-    refetch: fetchAll,
+    selectChild,
+    feedings: data.feedings || EMPTY,
+    weeklyFeedings: data.weeklyFeedings || data.feedings || EMPTY,
+    sleepEntries: data.sleepEntries || EMPTY,
+    weeklySleep: data.weeklySleep || data.sleepEntries || EMPTY,
+    changes: data.changes || EMPTY,
+    tummyTimes: data.tummyTimes || EMPTY,
+    weeklyTummyTimes: data.weeklyTummyTimes || data.tummyTimes || EMPTY,
+    temperatures: data.temperatures || EMPTY,
+    weights: data.weights || EMPTY,
+    heights: data.heights || EMPTY,
+    monthlyFeedings: data.monthlyFeedings || data.feedings || EMPTY,
+    monthlySleep: data.monthlySleep || data.sleepEntries || EMPTY,
+    pumping: data.pumping || EMPTY,
+    stockFeedings: stock?.stockFeedings || mock?.feedings || EMPTY,
+    stockPumping: stock?.stockPumping || EMPTY,
+    milkWaste: data.milkWaste || EMPTY,
+    notes: data.notes || EMPTY,
+    timers: mock?.timers || timersByChild.get(child?.id) || EMPTY,
+    loading: !config || (!demo && !offline && !childrenReady),
+    viewLoading: !demo && !offline && !!child && !snapshot.complete,
+    refreshing: !offline && refreshingKey === key,
+    failedSections: Object.keys(errors),
+    error: !demo ? errors.connection || snapshot.fullError || (!child && childrenError) || null : null,
+    lastSync: snapshot.lastSync,
+    unitSystem: config?.unit_system || DEFAULT_CONFIG.unit_system,
+    refetch,
   };
 }

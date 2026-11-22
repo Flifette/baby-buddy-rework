@@ -5,16 +5,19 @@ import base64
 import binascii
 import hmac
 import html
+import logging
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from time import monotonic
 
+from anyio import CancelScope
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 import httpx
-from starlette.background import BackgroundTask
+from starlette.types import Receive, Scope, Send
 
 # --- Configuration ---
 
@@ -55,6 +58,21 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 MILK_WASTE_FILE = Path(os.environ.get("MILK_WASTE_FILE", "/data/milk-waste.json"))
 milk_waste_lock = asyncio.Lock()
 
+logger = logging.getLogger("uvicorn.error.baby_buddy")
+UPSTREAM_DEADLINE_SECONDS = 20
+MAX_API_RESPONSE_BYTES = 16 * 1024 * 1024
+UPSTREAM_RESOURCES = frozenset({
+    "children", "feedings", "sleep", "changes", "tummy-times", "temperature",
+    "weight", "height", "pumping", "notes", "timers",
+})
+WRITE_METHODS = frozenset({"POST", "PATCH", "PUT", "DELETE"})
+UPSTREAM_ERROR_MESSAGES = {
+    "baby_buddy_unavailable": "Cannot connect to Baby Buddy",
+    "baby_buddy_timeout": "Baby Buddy request timed out",
+    "baby_buddy_unconfirmed_write": "Baby Buddy did not confirm the change",
+    "baby_buddy_invalid_response": "Baby Buddy sent an invalid or incomplete response",
+}
+
 # --- App lifecycle ---
 
 http_client: httpx.AsyncClient | None = None
@@ -76,7 +94,7 @@ async def lifespan(app: FastAPI):
             "Authorization": f"Token {BABY_BUDDY_API_KEY}",
             "Content-Type": "application/json",
         },
-        timeout=15.0,
+        timeout=httpx.Timeout(15.0, connect=5.0, pool=5.0),
         limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
     )
     yield
@@ -249,33 +267,116 @@ async def get_config():
     return {"refresh_interval": REFRESH_INTERVAL, "demo_mode": DEMO_MODE, "unit_system": UNIT_SYSTEM}
 
 
+def log_upstream_result(method, resource, phase, started, outcome, level=logging.WARNING):
+    logger.log(
+        level, "Baby Buddy method=%s resource=%s phase=%s outcome=%s elapsed_ms=%d",
+        method, resource, phase, outcome, round((monotonic() - started) * 1000),
+    )
+
+
+def upstream_error(method, resource, phase, started, outcome, status, code, *, write_uncertain=False):
+    log_upstream_result(method, resource, phase, started, outcome)
+    if method in WRITE_METHODS and write_uncertain:
+        code = "baby_buddy_unconfirmed_write"
+    return HTTPException(status, {"code": code, "message": UPSTREAM_ERROR_MESSAGES[code]})
+
+
+def upstream_transport_error(method, resource, phase, started, error):
+    timed_out = isinstance(error, (httpx.TimeoutException, TimeoutError))
+    known_unsent = isinstance(
+        error, (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout, httpx.UnsupportedProtocol)
+    )
+    return upstream_error(
+        method, resource, phase, started, type(error).__name__,
+        504 if timed_out else 502,
+        "baby_buddy_timeout" if timed_out else "baby_buddy_unavailable",
+        write_uncertain=not known_unsent,
+    )
+
+
+async def fetch_baby_buddy_api(method, path, *, params=None, body=None):
+    resource = path.partition("/")[0]
+    if resource not in UPSTREAM_RESOURCES:
+        resource = "other"
+    started = monotonic()
+    phase = "headers"
+    content = bytearray()
+    try:
+        async with asyncio.timeout(UPSTREAM_DEADLINE_SECONDS):
+            async with http_client.stream(
+                method, f"/api/{path}", params=params, content=body,
+            ) as response:
+                if response.status_code == 408 or response.is_server_error:
+                    timed_out = response.status_code in (408, 504)
+                    raise upstream_error(
+                        method, resource, phase, started, response.status_code,
+                        504 if timed_out else 502,
+                        "baby_buddy_timeout" if timed_out else "baby_buddy_unavailable",
+                        write_uncertain=True,
+                    )
+                phase = "body"
+                async for chunk in response.aiter_bytes():
+                    if len(content) + len(chunk) > MAX_API_RESPONSE_BYTES:
+                        raise upstream_error(
+                            method, resource, phase, started, "response_too_large",
+                            502, "baby_buddy_invalid_response", write_uncertain=True,
+                        )
+                    content.extend(chunk)
+    except (httpx.RequestError, TimeoutError) as error:
+        raise upstream_transport_error(method, resource, phase, started, error) from None
+
+    payload = None
+    if response.is_success and response.status_code not in (204, 205):
+        try:
+            payload = json.loads(content)
+        except (UnicodeDecodeError, ValueError, RecursionError):
+            raise upstream_error(
+                method, resource, "body", started, "invalid_json",
+                502, "baby_buddy_invalid_response", write_uncertain=True,
+            ) from None
+    if response.is_error or monotonic() - started >= 3:
+        log_upstream_result(
+            method, resource, "complete", started, response.status_code,
+            logging.WARNING if response.is_error else logging.INFO,
+        )
+    return response, bytes(content), payload
+
+
+@app.get("/api/ready", include_in_schema=False)
+async def readiness():
+    """Check connectivity and upstream credentials without returning child data."""
+    status = "not_ready"
+    if DEMO_MODE:
+        status = "demo"
+    elif BABY_BUDDY_URL and BABY_BUDDY_API_KEY:
+        try:
+            response, _, payload = await fetch_baby_buddy_api("GET", "children/", params={"limit": 1})
+            if response.is_success and (
+                isinstance(payload, list)
+                or isinstance(payload, dict) and isinstance(payload.get("results"), list)
+            ):
+                status = "ready"
+        except HTTPException:
+            pass
+    return JSONResponse(
+        {"status": status}, status_code=503 if status == "not_ready" else 200,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 @app.api_route(
     "/api/baby-buddy/{path:path}",
     methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
 )
 async def proxy_baby_buddy(path: str, request: Request):
     """Proxy requests to the remote Baby Buddy API."""
-    target_url = f"/api/{path}"
-    params = dict(request.query_params)
-
     body = None
-    content_type = request.headers.get("content-type", "")
     if request.method in ("POST", "PATCH", "PUT"):
         body = await read_limited_body(request)
 
-    try:
-        headers = {}
-        if body and "application/json" in content_type:
-            headers["Content-Type"] = "application/json"
-
-        upstream_request = http_client.build_request(
-            request.method, target_url, params=params, content=body, headers=headers
-        )
-        response = await http_client.send(upstream_request, stream=True)
-    except httpx.ConnectError:
-        raise HTTPException(502, "Cannot connect to Baby Buddy")
-    except httpx.TimeoutException:
-        raise HTTPException(504, "Baby Buddy request timed out")
+    response, content, _ = await fetch_baby_buddy_api(
+        request.method, path, params=dict(request.query_params), body=body,
+    )
 
     excluded_headers = {"transfer-encoding", "content-encoding", "content-length", "connection", "server"}
     response_headers = {
@@ -284,36 +385,46 @@ async def proxy_baby_buddy(path: str, request: Request):
         if k.lower() not in excluded_headers
     }
 
-    return StreamingResponse(
-        response.aiter_bytes(),
-        status_code=response.status_code,
-        headers=response_headers,
-        background=BackgroundTask(response.aclose),
-    )
+    return Response(content, status_code=response.status_code, headers=response_headers)
+
+
+class UpstreamMediaResponse(StreamingResponse):
+    def __init__(self, upstream: httpx.Response):
+        super().__init__(
+            upstream.aiter_bytes(),
+            headers={"Content-Type": upstream.headers.get("content-type", "application/octet-stream")},
+        )
+        self.upstream = upstream
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        started = monotonic()
+        try:
+            await super().__call__(scope, receive, send)
+        except httpx.RequestError as error:
+            log_upstream_result("GET", "media", "body", started, type(error).__name__)
+            raise
+        finally:
+            with CancelScope(shield=True):
+                await self.upstream.aclose()
 
 
 @app.get("/api/media/{path:path}")
 async def proxy_media(path: str):
     """Proxy media files (e.g. child photos) from Baby Buddy."""
+    started = monotonic()
     try:
         upstream_request = http_client.build_request(
             "GET", f"/{path}", headers={"Accept": "*/*"}
         )
         response = await http_client.send(upstream_request, stream=True)
-    except httpx.ConnectError:
-        raise HTTPException(502, "Cannot connect to Baby Buddy")
-    except httpx.TimeoutException:
-        raise HTTPException(504, "Baby Buddy request timed out")
+    except httpx.RequestError as error:
+        raise upstream_transport_error("GET", "media", "headers", started, error) from None
 
     if response.status_code != 200:
         await response.aclose()
         raise HTTPException(response.status_code, "Media not found")
 
-    return StreamingResponse(
-        response.aiter_bytes(),
-        headers={"Content-Type": response.headers.get("content-type", "application/octet-stream")},
-        background=BackgroundTask(response.aclose),
-    )
+    return UpstreamMediaResponse(response)
 
 
 # --- Static files (React SPA) ---

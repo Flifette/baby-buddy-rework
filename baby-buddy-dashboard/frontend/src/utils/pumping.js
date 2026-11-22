@@ -19,6 +19,12 @@ export function parsePumpingNote(value) {
   return { side, note: String(match[2] || "").trim() };
 }
 
+export function isPumpingPeriodValid(startValue, endValue) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  return !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end >= start;
+}
+
 export function pumpingPatchPayload(entry, draft) {
   const patch = {};
   if (Number(draft.amount) !== Number(entry.amount)) patch.amount = Number(draft.amount);

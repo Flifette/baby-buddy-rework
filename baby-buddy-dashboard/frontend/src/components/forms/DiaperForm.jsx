@@ -30,10 +30,22 @@ export default function DiaperForm({ childId, entry, onDone, onClose, preset }) 
   const [notes, setNotes] = useState(entry?.notes || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteChange(entry.id); onDone(); } catch { setSaving(false); } };
+  const remove = async () => {
+    if (!entry?.id || saving) return;
+    setError("");
+    setSaving(true);
+    try {
+      await api.deleteChange(entry.id);
+      onDone();
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
+      setSaving(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
     if (!diaperType) {
       setError(t("form.error.diaperType"));
@@ -54,14 +66,13 @@ export default function DiaperForm({ childId, entry, onDone, onClose, preset }) 
       }
       onDone();
     } catch (requestError) {
-      console.error("Unable to save diaper change", requestError);
       setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={t(isEdit ? "form.diaper.edit" : "form.diaper.add")} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.diaper.edit" : "form.diaper.add")} onClose={onClose} busy={saving}>
       <form onSubmit={handleSubmit}>
         <FormField label={t("common.time")}>
           <FormInput
