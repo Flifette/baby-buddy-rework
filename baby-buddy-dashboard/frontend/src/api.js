@@ -1,24 +1,79 @@
 const API_BASE = "./api/baby-buddy";
 const CONFIG_PATH = "./api/config";
 const MILK_WASTE_PATH = "./api/milk-waste";
+const READ_TIMEOUT_MS = 20000;
+const WRITE_TIMEOUT_MS = 25000;
 
-async function request(endpoint, options = {}) {
-  const url = `${API_BASE}/${endpoint}`;
-  const config = {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  };
-
-  const response = await fetch(url, config);
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`API error ${response.status}: ${text}`);
+export class ApiError extends Error {
+  constructor(message, { status, code, detail, uncertain = false, timedOut = false } = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.detail = detail;
+    this.uncertain = uncertain;
+    this.timedOut = timedOut;
   }
-
-  if (response.status === 204) return null;
-  return response.json();
 }
+
+async function jsonRequest(url, { signal, ...options } = {}) {
+  const read = !options.method || options.method === "GET";
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  if (signal?.aborted) cancel();
+  signal?.addEventListener("abort", cancel, { once: true });
+  let timedOut = false;
+  let invalidResponse = false;
+  const deadline = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, read ? READ_TIMEOUT_MS : WRITE_TIMEOUT_MS);
+
+  try {
+    if (controller.signal.aborted) throw new DOMException("Request cancelled", "AbortError");
+    const response = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+      signal: controller.signal,
+    });
+    if (response.status === 204) return null;
+
+    const body = await response.text();
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      invalidResponse = true;
+    }
+
+    if (!response.ok) {
+      const detail = data && JSON.stringify(data);
+      const code = data?.detail?.code;
+      const uncertain = !read && (code === "baby_buddy_unconfirmed_write"
+        || (!code && (response.status === 408 || response.status >= 500)));
+      throw new ApiError(`API error ${response.status}`, {
+        status: response.status,
+        code: code || (uncertain ? "request_unconfirmed_write" : undefined),
+        detail,
+        uncertain,
+      });
+    }
+    if (invalidResponse) throw new Error("Expected JSON response");
+    return data;
+  } catch (error) {
+    if (signal?.aborted) throw new DOMException("Request cancelled", "AbortError");
+    if (error instanceof ApiError) throw error;
+    const code = !read ? "request_unconfirmed_write"
+      : timedOut ? "request_timeout"
+      : invalidResponse ? "request_invalid_response" : "request_network";
+    throw new ApiError(code, { code, uncertain: !read, timedOut });
+  } finally {
+    clearTimeout(deadline);
+    signal?.removeEventListener("abort", cancel);
+  }
+}
+
+const request = (endpoint, options) => jsonRequest(`${API_BASE}/${endpoint}`, options);
 
 function qs(params) {
   if (!params) return "";
@@ -29,25 +84,14 @@ function qs(params) {
   return s ? `?${s}` : "";
 }
 
-async function dashboardRequest(path, options = {}) {
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`API error ${response.status}: ${text}`);
-  }
-  if (response.status === 204) return null;
-  return response.json();
-}
+const list = (endpoint) => (params, options) => request(`${endpoint}/${qs(params)}`, options);
 
 export const api = {
   // Children
-  getChildren: () => request("children/"),
+  getChildren: list("children"),
 
   // Feedings
-  getFeedings: (params) => request(`feedings/${qs(params)}`),
+  getFeedings: list("feedings"),
   createFeeding: (data) =>
     request("feedings/", { method: "POST", body: JSON.stringify(data) }),
   updateFeeding: (id, data) =>
@@ -55,7 +99,7 @@ export const api = {
   deleteFeeding: (id) => request(`feedings/${id}/`, { method: "DELETE" }),
 
   // Sleep
-  getSleep: (params) => request(`sleep/${qs(params)}`),
+  getSleep: list("sleep"),
   createSleep: (data) =>
     request("sleep/", { method: "POST", body: JSON.stringify(data) }),
   updateSleep: (id, data) =>
@@ -63,7 +107,7 @@ export const api = {
   deleteSleep: (id) => request(`sleep/${id}/`, { method: "DELETE" }),
 
   // Diapers (changes)
-  getChanges: (params) => request(`changes/${qs(params)}`),
+  getChanges: list("changes"),
   createChange: (data) =>
     request("changes/", { method: "POST", body: JSON.stringify(data) }),
   updateChange: (id, data) =>
@@ -71,7 +115,7 @@ export const api = {
   deleteChange: (id) => request(`changes/${id}/`, { method: "DELETE" }),
 
   // Tummy time
-  getTummyTimes: (params) => request(`tummy-times/${qs(params)}`),
+  getTummyTimes: list("tummy-times"),
   createTummyTime: (data) =>
     request("tummy-times/", { method: "POST", body: JSON.stringify(data) }),
   updateTummyTime: (id, data) =>
@@ -79,7 +123,7 @@ export const api = {
   deleteTummyTime: (id) => request(`tummy-times/${id}/`, { method: "DELETE" }),
 
   // Temperature
-  getTemperature: (params) => request(`temperature/${qs(params)}`),
+  getTemperature: list("temperature"),
   createTemperature: (data) =>
     request("temperature/", { method: "POST", body: JSON.stringify(data) }),
   updateTemperature: (id, data) =>
@@ -87,7 +131,7 @@ export const api = {
   deleteTemperature: (id) => request(`temperature/${id}/`, { method: "DELETE" }),
 
   // Weight
-  getWeight: (params) => request(`weight/${qs(params)}`),
+  getWeight: list("weight"),
   createWeight: (data) =>
     request("weight/", { method: "POST", body: JSON.stringify(data) }),
   updateWeight: (id, data) =>
@@ -95,7 +139,7 @@ export const api = {
   deleteWeight: (id) => request(`weight/${id}/`, { method: "DELETE" }),
 
   // Height
-  getHeight: (params) => request(`height/${qs(params)}`),
+  getHeight: list("height"),
   createHeight: (data) =>
     request("height/", { method: "POST", body: JSON.stringify(data) }),
   updateHeight: (id, data) =>
@@ -103,7 +147,7 @@ export const api = {
   deleteHeight: (id) => request(`height/${id}/`, { method: "DELETE" }),
 
   // Pumping
-  getPumping: (params) => request(`pumping/${qs(params)}`),
+  getPumping: list("pumping"),
   createPumping: (data) =>
     request("pumping/", { method: "POST", body: JSON.stringify(data) }),
   updatePumping: (id, data) => request(`pumping/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
@@ -111,13 +155,13 @@ export const api = {
 
   // Milk discarded after a bottle was started. Stored by this dashboard,
   // separately from Baby Buddy feedings so it never counts as a meal.
-  getMilkWaste: (params) => dashboardRequest(`${MILK_WASTE_PATH}${qs(params)}`),
-  createMilkWaste: (data) => dashboardRequest(MILK_WASTE_PATH, { method: "POST", body: JSON.stringify(data) }),
-  updateMilkWaste: (id, data) => dashboardRequest(`${MILK_WASTE_PATH}/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-  deleteMilkWaste: (id) => dashboardRequest(`${MILK_WASTE_PATH}/${id}`, { method: "DELETE" }),
+  getMilkWaste: (params, options) => jsonRequest(`${MILK_WASTE_PATH}${qs(params)}`, options),
+  createMilkWaste: (data) => jsonRequest(MILK_WASTE_PATH, { method: "POST", body: JSON.stringify(data) }),
+  updateMilkWaste: (id, data) => jsonRequest(`${MILK_WASTE_PATH}/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteMilkWaste: (id) => jsonRequest(`${MILK_WASTE_PATH}/${id}`, { method: "DELETE" }),
 
   // Notes
-  getNotes: (params) => request(`notes/${qs(params)}`),
+  getNotes: list("notes"),
   createNote: (data) =>
     request("notes/", { method: "POST", body: JSON.stringify(data) }),
   updateNote: (id, data) =>
@@ -125,7 +169,7 @@ export const api = {
   deleteNote: (id) => request(`notes/${id}/`, { method: "DELETE" }),
 
   // Timers
-  getTimers: () => request("timers/"),
+  getTimers: list("timers"),
   createTimer: (data) =>
     request("timers/", { method: "POST", body: JSON.stringify(data) }),
   updateTimer: (id, data) =>
@@ -133,5 +177,5 @@ export const api = {
   deleteTimer: (id) => request(`timers/${id}/`, { method: "DELETE" }),
 
   // Config (our backend, not Baby Buddy)
-  getConfig: () => fetch(CONFIG_PATH).then((r) => r.json()),
+  getConfig: (options) => jsonRequest(CONFIG_PATH, options),
 };

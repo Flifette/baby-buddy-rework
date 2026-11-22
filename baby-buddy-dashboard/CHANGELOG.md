@@ -2,6 +2,12 @@
 
 # En préparation
 
+- Une actualisation lente ou partielle conserve les dernières données reçues. Le tableau reprend la synchronisation au retour dans l’application et ignore les réponses de l’ancienne vue ou de l’ancien enfant.
+- La vue Journée charge les occurrences de la date choisie. L’affichage des longues périodes demande moins de calculs, même pendant un minuteur.
+- Un minuteur reste affiché tant que son activité n’est pas enregistrée. En cas de coupure, un message indique si le résultat reste à vérifier avant de réessayer.
+- Ajout de tests mobiles de reprise et d’enregistrement, ainsi que d’un contrôle de connexion à Baby Buddy pour le diagnostic.
+- Lorsqu’un sommeil lancé par minuteur chevauche une occurrence existante, le formulaire indique désormais clairement le type et les horaires du sommeil ou de la sieste en conflit au lieu d’afficher une erreur générique.
+- Les tirages dont l’heure de début et l’heure de fin sont identiques restent désormais modifiables ; seule une heure de fin réellement antérieure au début est refusée.
 - La vue Journée permet désormais d’ouvrir un calendrier natif depuis sa date centrale afin d’accéder directement à une journée précise ; les dates futures sont bloquées et les flèches ainsi que le raccourci « Aujourd’hui » restent disponibles.
 - Lorsqu’un repas existant est déplacé dans le temps, son heure de fin suit automatiquement son heure de début afin de conserver sa durée et d’éviter les périodes invalides ; la vue Journée préserve également le véritable type du repas pendant l’édition.
 - Les modifications d’horaires des repas et des tirages transmettent désormais un instant absolu avec son fuseau, ce qui évite les décalages silencieux et les faux horaires futurs ; les tirages utilisent également un PATCH minimal sans dupliquer l’indication du sein dans la note.

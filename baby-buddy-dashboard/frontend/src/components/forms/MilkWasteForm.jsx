@@ -21,6 +21,7 @@ export default function MilkWasteForm({ childId, entry, onDone, onClose }) {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (saving) return;
     setError("");
     setSaving(true);
     const data = { child: childId, amount: Number(amount), time: localDatetimeToApi(time), note: note.trim() };
@@ -29,25 +30,26 @@ export default function MilkWasteForm({ childId, entry, onDone, onClose }) {
       else await api.createMilkWaste(data);
       onDone();
     } catch (requestError) {
-      console.error("Unable to save uneaten milk", requestError);
       setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   const remove = async () => {
-    if (!entry?.id) return;
+    if (!entry?.id || saving) return;
+    setError("");
     setSaving(true);
     try {
       await api.deleteMilkWaste(entry.id);
       onDone();
-    } catch {
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={t(entry ? "form.milkWaste.edit" : "form.milkWaste.add")} onClose={onClose}>
+    <Modal title={t(entry ? "form.milkWaste.edit" : "form.milkWaste.add")} onClose={onClose} busy={saving}>
       <form onSubmit={submit}>
         <FormField label={t("form.milkWaste.amount")}>
           <FormInput type="number" min="1" max="5000" step="1" value={amount} onChange={(event) => { setAmount(event.target.value); setError(""); }} required autoFocus />

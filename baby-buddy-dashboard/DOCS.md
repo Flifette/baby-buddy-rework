@@ -20,6 +20,14 @@ The separate community Home Assistant Baby Buddy integration is **not required**
 
 After saving the configuration, start the add-on and use **Open Web UI** or its sidebar entry.
 
+### Connection interruptions
+
+If a refresh fails, the dashboard keeps any data it has already loaded for the selected view. Use the refresh button to check again. The dashboard also refreshes when you return to the app or your connection is restored.
+
+If a save could not be confirmed, check the activity in **Day** or check the active timers before trying again. The dashboard never automatically repeats a write whose outcome is unknown.
+
+For diagnostics, the authenticated `/api/ready` route checks that the Dashboard can reach the Baby Buddy API and returns only a readiness status. `/healthz` reports whether the Dashboard process is running.
+
 ### Language selection
 
 Use the compact **FR / EN** selector in the dashboard header to change the interface language immediately. Views, cards, forms, buttons, charts, tooltips, dates, times, activity labels, and validation or error messages are translated together.
@@ -67,6 +75,14 @@ L’intégration communautaire Home Assistant Baby Buddy séparée n’est **pas
 - **Système d’unités** : libellés métriques ou impériaux.
 
 Après enregistrement de la configuration, démarrez l’add-on et utilisez **Ouvrir l’interface Web** ou l’entrée de la barre latérale.
+
+### Coupures de connexion
+
+Si l’actualisation échoue, le dashboard conserve les données déjà chargées pour la vue sélectionnée. Utilisez le bouton d’actualisation pour vérifier de nouveau. Le dashboard s’actualise aussi au retour dans l’application ou au rétablissement de la connexion.
+
+Si un enregistrement n’a pas pu être confirmé, vérifiez l’occurrence dans **Journée** ou consultez les minuteurs actifs avant de réessayer. Le dashboard ne renvoie jamais automatiquement une écriture dont le résultat est inconnu.
+
+Pour le diagnostic, la route authentifiée `/api/ready` vérifie que le Dashboard peut joindre l’API Baby Buddy et renvoie uniquement un état de disponibilité. `/healthz` indique si le processus du Dashboard fonctionne.
 
 ### Choix de la langue
 

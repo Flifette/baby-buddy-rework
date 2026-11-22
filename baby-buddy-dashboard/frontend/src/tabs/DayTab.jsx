@@ -18,10 +18,9 @@ const TYPES = {
   note: ["note", colors.note, Icons.StickyNote],
 };
 
-export default function DayTab({ feedings = [], pumping = [], milkWaste = [], changes = [], sleepEntries = [], tummyTimes = [], temperatures = [], weights = [], heights = [], notes = [], onEditEntry }) {
+export default function DayTab({ day, onDayChange, loading = false, feedings = [], pumping = [], milkWaste = [], changes = [], sleepEntries = [], tummyTimes = [], temperatures = [], weights = [], heights = [], notes = [], onEditEntry }) {
   const { language, locale, t } = useLanguage();
   const units = useUnits();
-  const [day, setDay] = useState(new Date());
   const [hovered, setHovered] = useState(null);
   const selected = localDateKey(day);
   const todayKey = localDateKey(new Date());
@@ -36,19 +35,19 @@ export default function DayTab({ feedings = [], pumping = [], milkWaste = [], ch
     ...sleepEntries.map((e) => ({ ...e, activityType: "sleep", at: e.start, text: formatDuration(e.duration, language) })),
     ...tummyTimes.map((e) => ({ ...e, activityType: "tummy", at: e.start, text: t("activity.tummy") })),
     ...temperatures.map((e) => ({ ...e, activityType: "temp", at: e.time, text: `${e.temperature ?? e.value ?? "—"} ${units.temp}` })),
-    ...weights.map((e) => ({ ...e, activityType: "weight", at: e.date, text: `${e.weight ?? e.value ?? "—"} ${units.weight}` })),
-    ...heights.map((e) => ({ ...e, activityType: "height", at: e.date, text: `${e.height ?? e.value ?? "—"} ${units.length}` })),
+    ...weights.map((e) => ({ ...e, activityType: "weight", at: localDateFromKey(e.date) || e.date, text: `${e.weight ?? e.value ?? "—"} ${units.weight}` })),
+    ...heights.map((e) => ({ ...e, activityType: "height", at: localDateFromKey(e.date) || e.date, text: `${e.height ?? e.value ?? "—"} ${units.length}` })),
     ...notes.map((e) => ({ ...e, activityType: "note", at: e.time, text: e.note || t("activity.note") })),
   ].filter((e) => e.at && localDateKey(e.at) === selected).sort((a, b) => new Date(a.at) - new Date(b.at)), [selected, feedings, pumping, milkWaste, changes, sleepEntries, tummyTimes, temperatures, weights, heights, notes, language, t, units]);
 
-  const shift = (amount) => setDay((current) => {
-    const candidate = new Date(current.getFullYear(), current.getMonth(), current.getDate() + amount, 12);
-    return localDateKey(candidate) <= todayKey ? candidate : current;
-  });
+  const shift = (amount) => {
+    const candidate = new Date(day.getFullYear(), day.getMonth(), day.getDate() + amount, 12);
+    if (localDateKey(candidate) <= todayKey) onDayChange(candidate);
+  };
 
   const selectDay = (event) => {
     const candidate = localDateFromKey(event.target.value);
-    if (candidate && event.target.value <= todayKey) setDay(candidate);
+    if (candidate && event.target.value <= todayKey) onDayChange(candidate);
   };
 
   return (
@@ -62,7 +61,7 @@ export default function DayTab({ feedings = [], pumping = [], milkWaste = [], ch
           <input type="date" value={selected} max={todayKey} onChange={selectDay} aria-label={t("day.chooseDate")} />
         </label>
         <button type="button" onClick={() => shift(1)} disabled={selected >= todayKey} aria-label={t("day.nextDate")}>›</button>
-        <button type="button" className="day-today" disabled={selected === todayKey} onClick={() => setDay(new Date())}>{t("common.today")}</button>
+        <button type="button" className="day-today" disabled={selected === todayKey} onClick={() => onDayChange(new Date())}>{t("common.today")}</button>
       </div>
       <div className="day-timeline">
         {events.length ? events.map((event, index) => {
@@ -70,7 +69,7 @@ export default function DayTab({ feedings = [], pumping = [], milkWaste = [], ch
           const label = t(`activity.${labelKey}`);
           const eventKey = `${event.activityType}-${event.id || index}`;
           const side = index % 2 === 0 ? "left" : "right";
-          const eventTime = formatTime(event.at, language);
+          const eventTime = event.activityType === "weight" || event.activityType === "height" ? "—" : formatTime(event.at, language);
           const tooltip = `${label} · ${eventTime} · ${event.text}`;
           return (
             <div className={`day-event day-event-${side}`} key={eventKey}>
@@ -87,7 +86,7 @@ export default function DayTab({ feedings = [], pumping = [], milkWaste = [], ch
               </div>
             </div>
           );
-        }) : <div className="day-empty">{t("day.noActivity")}</div>}
+        }) : <div className="day-empty" role="status">{t(loading ? "common.loading" : "day.noActivity")}</div>}
       </div>
     </div>
   );

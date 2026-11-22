@@ -6,7 +6,7 @@ import { useUnits } from "../../utils/units";
 import { useLanguage } from "../../utils/i18n";
 import { apiErrorTranslationKey } from "../../utils/formValidation";
 import { localDatetimeToApi } from "../../utils/datetime";
-import { parsePumpingNote, pumpingPatchPayload } from "../../utils/pumping";
+import { isPumpingPeriodValid, parsePumpingNote, pumpingPatchPayload } from "../../utils/pumping";
 import { shiftFeedingEndWithStart } from "../../utils/feedings";
 
 function localDateTime(date) {
@@ -36,8 +36,9 @@ export default function PumpingForm({ childId, entry, onDone, onClose }) {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (saving) return;
     setError("");
-    if (new Date(end) <= new Date(start)) {
+    if (!isPumpingPeriodValid(start, end)) {
       setError(t("form.error.endBeforeStart"));
       return;
     }
@@ -64,19 +65,20 @@ export default function PumpingForm({ childId, entry, onDone, onClose }) {
       }
       onDone();
     } catch (requestError) {
-      console.error("Unable to save pumping", requestError);
       setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   const remove = async () => {
-    if (!entry?.id) return;
+    if (!entry?.id || saving) return;
+    setError("");
     setSaving(true);
     try {
       await api.deletePumping(entry.id);
       onDone();
-    } catch {
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
@@ -88,7 +90,7 @@ export default function PumpingForm({ childId, entry, onDone, onClose }) {
   ];
 
   return (
-    <Modal title={t(entry ? "form.pumping.edit" : "form.pumping.add")} onClose={onClose}>
+    <Modal title={t(entry ? "form.pumping.edit" : "form.pumping.add")} onClose={onClose} busy={saving}>
       <form onSubmit={submit}>
         <FormField label={`${t("common.quantity")} (${units.volume})`}>
           <FormInput type="number" min="1" step="1" value={amount} onChange={(event) => { setAmount(event.target.value); setError(""); }} required autoFocus />

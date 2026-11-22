@@ -18,10 +18,22 @@ export default function NoteForm({ childId, entry, onDone, onClose }) {
   const [note, setNote] = useState(entry?.note || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteNote(entry.id); onDone(); } catch { setSaving(false); } };
+  const remove = async () => {
+    if (!entry?.id || saving) return;
+    setError("");
+    setSaving(true);
+    try {
+      await api.deleteNote(entry.id);
+      onDone();
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
+      setSaving(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
     setSaving(true);
     try {
@@ -40,7 +52,7 @@ export default function NoteForm({ childId, entry, onDone, onClose }) {
   };
 
   return (
-    <Modal title={t(isEdit ? "form.note.edit" : "form.note.add")} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.note.edit" : "form.note.add")} onClose={onClose} busy={saving}>
       <form onSubmit={handleSubmit}>
         <FormField label={t("common.time")}>
           <FormInput

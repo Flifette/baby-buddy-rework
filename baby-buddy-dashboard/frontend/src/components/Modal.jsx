@@ -4,7 +4,7 @@ import { useLanguage } from "../utils/i18n";
 
 const TEMPORAL_INPUT_TYPES = new Set(["date", "datetime-local", "time", "month", "week"]);
 
-export default function Modal({ title, children, onClose }) {
+export default function Modal({ title, children, onClose, busy = false }) {
   const { t } = useLanguage();
   return (
     <div
@@ -19,16 +19,21 @@ export default function Modal({ title, children, onClose }) {
         zIndex: 1000,
         padding: 20,
       }}
-      onClick={onClose}
+      onClick={busy ? undefined : onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        aria-busy={busy}
         style={{
           background: "var(--card-bg)",
           border: "1px solid var(--border)",
           borderRadius: 16,
           width: "100%",
           maxWidth: 400,
-          overflow: "hidden",
+          maxHeight: "100%",
+          overflowY: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -46,13 +51,14 @@ export default function Modal({ title, children, onClose }) {
           </span>
           <button
             onClick={onClose}
+            disabled={busy}
             aria-label={t("common.close")}
             title={t("common.close")}
             style={{
               background: "none",
               border: "none",
               color: "var(--text-muted)",
-              cursor: "pointer",
+              cursor: busy ? "default" : "pointer",
               padding: 4,
             }}
           >

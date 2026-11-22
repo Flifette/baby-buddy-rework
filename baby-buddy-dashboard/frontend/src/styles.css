@@ -99,6 +99,29 @@ body {
   font-weight: 500;
 }
 
+.sync-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: #FCA5A5;
+  font-size: 13px;
+}
+
+.sync-notice .refresh-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 32px;
+  height: auto;
+  padding: 6px 10px;
+  font: inherit;
+}
+
 .period-selector {
   display: flex;
   align-items: center;
@@ -208,10 +231,21 @@ body {
 }
 
 .timer-elapsed {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
   font-family: var(--mono);
   font-size: 16px;
   font-weight: 600;
   color: var(--timer-color, #F59E0B);
+}
+
+.timer-elapsed:disabled,
+.timer-save-btn:disabled,
+.timer-discard-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .timer-edit-input {

@@ -16,6 +16,7 @@ export default function TemperatureForm({ childId, entry, onDone, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
     setSaving(true);
     try {
@@ -28,10 +29,21 @@ export default function TemperatureForm({ childId, entry, onDone, onClose }) {
       setSaving(false);
     }
   };
-  const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteTemperature(entry.id); onDone(); } catch { setSaving(false); } };
+  const remove = async () => {
+    if (!entry?.id || saving) return;
+    setError("");
+    setSaving(true);
+    try {
+      await api.deleteTemperature(entry.id);
+      onDone();
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
+      setSaving(false);
+    }
+  };
 
   return (
-    <Modal title={t(isEdit ? "form.temperature.edit" : "form.temperature.add")} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.temperature.edit" : "form.temperature.add")} onClose={onClose} busy={saving}>
       <form onSubmit={handleSubmit}>
         <FormField label={`${t("activity.temperature")} (${units.temp})`}>
           <FormInput

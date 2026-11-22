@@ -5,7 +5,7 @@ import Modal, { FormField, FormInput, FormButton, FormError, DeleteIconButton } 
 import { colors } from "../../utils/colors";
 import { useLanguage } from "../../utils/i18n";
 import { formatTime } from "../../utils/formatters";
-import { apiErrorTranslationKey, findTimeOverlap } from "../../utils/formValidation";
+import { apiErrorTranslationKey, findSleepOverlap } from "../../utils/formValidation";
 import { localDatetimeToApi } from "../../utils/datetime";
 
 function toLocalDatetime(date) {
@@ -13,7 +13,7 @@ function toLocalDatetime(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function SleepForm({ childId, timerId, entry, sleepEntries = [], onDone, onClose }) {
+export default function SleepForm({ childId, timerId, timerStart, entry, sleepEntries = [], onDone, onClose }) {
   const { language, t } = useLanguage();
   const isEdit = !!entry;
   const now = new Date();
@@ -23,16 +23,34 @@ export default function SleepForm({ childId, timerId, entry, sleepEntries = [], 
   const [notes, setNotes] = useState(entry?.notes || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteSleep(entry.id); onDone(); } catch { setSaving(false); } };
+  const remove = async () => {
+    if (!entry?.id || saving) return;
+    setError("");
+    setSaving(true);
+    try {
+      await api.deleteSleep(entry.id);
+      onDone();
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
+      setSaving(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
     if (!timerId && new Date(end) <= new Date(start)) {
       setError(t("form.error.endBeforeStart"));
       return;
     }
-    const overlap = !timerId ? findTimeOverlap(sleepEntries, start, end, entry?.id) : null;
+    const overlap = findSleepOverlap(sleepEntries, {
+      timerId,
+      timerStart,
+      start,
+      end,
+      excludedId: entry?.id,
+    });
     if (overlap) {
       setError(t(overlap.nap ? "form.error.napOverlap" : "form.error.sleepOverlap", {
         start: formatTime(overlap.start, language),
@@ -62,14 +80,13 @@ export default function SleepForm({ childId, timerId, entry, sleepEntries = [], 
       }
       onDone();
     } catch (requestError) {
-      console.error("Unable to save sleep", requestError);
       setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={t(isEdit ? "form.sleep.edit" : "form.sleep.add")} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.sleep.edit" : "form.sleep.add")} onClose={onClose} busy={saving}>
       <form onSubmit={handleSubmit}>
         {!isEdit && timerId ? (
           <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>

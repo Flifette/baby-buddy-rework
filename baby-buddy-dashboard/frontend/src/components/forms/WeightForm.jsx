@@ -20,10 +20,22 @@ export default function WeightForm({ childId, entry, onDone, onClose }) {
   const [date, setDate] = useState(entry?.date ? toLocalDate(entry.date) : toLocalDate(new Date()));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteWeight(entry.id); onDone(); } catch { setSaving(false); } };
+  const remove = async () => {
+    if (!entry?.id || saving) return;
+    setError("");
+    setSaving(true);
+    try {
+      await api.deleteWeight(entry.id);
+      onDone();
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
+      setSaving(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
     setSaving(true);
     try {
@@ -45,7 +57,7 @@ export default function WeightForm({ childId, entry, onDone, onClose }) {
   };
 
   return (
-    <Modal title={t(isEdit ? "form.weight.edit" : "form.weight.add")} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.weight.edit" : "form.weight.add")} onClose={onClose} busy={saving}>
       <form onSubmit={handleSubmit}>
         <FormField label={`${t("activity.weight")} (${units.weight})`}>
           <FormInput

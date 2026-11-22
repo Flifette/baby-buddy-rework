@@ -48,10 +48,22 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const directBreastfeeding = isDirectBreastfeeding(method);
-  const remove = async () => { if (!entry?.id) return; setSaving(true); try { await api.deleteFeeding(entry.id); onDone(); } catch { setSaving(false); } };
+  const remove = async () => {
+    if (!entry?.id || saving) return;
+    setError("");
+    setSaving(true);
+    try {
+      await api.deleteFeeding(entry.id);
+      onDone();
+    } catch (requestError) {
+      setError(t(apiErrorTranslationKey(requestError)));
+      setSaving(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
     if (!timerId && new Date(end) <= new Date(start)) {
       setError(t("form.error.endBeforeStart"));
@@ -78,14 +90,13 @@ export default function FeedingForm({ childId, timerId, entry, onDone, onClose }
       }
       onDone();
     } catch (requestError) {
-      console.error("Unable to save feeding", requestError);
       setError(t(apiErrorTranslationKey(requestError)));
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={t(isEdit ? "form.feeding.edit" : "form.feeding.add")} onClose={onClose}>
+    <Modal title={t(isEdit ? "form.feeding.edit" : "form.feeding.add")} onClose={onClose} busy={saving}>
       <form onSubmit={handleSubmit}>
         <FormField label={t("form.feeding.type")}>
           <FormSelect options={typeOptions} value={type} onChange={(e) => { setType(e.target.value); setError(""); }} />
