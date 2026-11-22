@@ -48,15 +48,45 @@ for (const { name, browserType, device, language } of engines) {
       assert.equal(await timer.isVisible(), true);
       assert.equal(await feeding.isVisible(), true);
       state.feeding.amount = 53;
+      let markPending;
+      let releaseRead;
+      const readPending = new Promise((resolve) => { markPending = resolve; });
+      const readGate = new Promise((resolve) => { releaseRead = resolve; });
+      await page.route("**/api/baby-buddy/pumping/**", async (route) => {
+        markPending();
+        await readGate;
+        await route.continue();
+      }, { times: 1 });
       await context.setOffline(false);
       await syncError.waitFor({ state: "hidden" });
       await page.getByText("53 mL", { exact: true }).waitFor();
+      await readPending;
+
+      // Simulate leaving and restoring the WebView without reloading it.
+      await page.evaluate(() => {
+        Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      state.feeding.amount = 61;
+      assert.equal(await page.getByText("53 mL", { exact: true }).isVisible(), true);
+      await page.evaluate(() => {
+        delete document.visibilityState;
+        window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+      });
+      releaseRead();
+      await page.getByText("61 mL", { exact: true }).waitFor();
 
       const save = page.getByRole("button", { name: french ? "Enregistrer le sommeil" : "Save sleep", exact: true });
       const note = page.getByPlaceholder(french ? "Facultative" : "Optional", { exact: true });
       const formError = page.getByRole("alert").filter({
         hasText: french ? /avant de réessayer/i : /before trying again/i,
       });
+      await timer.locator(".timer-save-btn").tap();
+      await page.getByRole("dialog").getByRole("button", { name: french ? "Fermer" : "Close", exact: true }).tap();
+      await save.waitFor({ state: "hidden" });
+      assert.equal(await timer.isVisible(), true);
+      assert.deepEqual(state.sleepPosts, []);
+
       state.sleepWriteUnavailable = true;
       await timer.locator(".timer-save-btn").tap();
       await note.fill("Browser fixture note");

@@ -161,7 +161,8 @@ export function useBabyData(period = "week", { activeTab = "overview", day = new
       available: () => navigator.onLine !== false && document.visibilityState !== "hidden",
     });
     const resume = (event) => {
-      void loop.refresh({ queue: event.type === "online" });
+      // An active refresh may already have read the saved data before resuming.
+      void loop.refresh({ queue: event.type !== "offline" });
     };
     loopRef.current = loop;
     document.addEventListener("visibilitychange", resume);
